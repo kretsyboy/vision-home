@@ -53,3 +53,8 @@ On a laptop, use the arrow keys, Enter and Esc. Mouse hover acts as gaze, and cl
 - Text is at least 16 px. Primary content is 20–28 px, and buttons are at least 58 px tall.
 - Camera, microphone and notifications aren't available to Display Web Apps yet, so no app relies on them.
 - Spoken alerts use `speechSynthesis`, which Meta supports with one voice. Do Not Disturb mutes them.
+
+## On a computer
+
+- **Mac app:** `desktop/build_app.sh` builds **SiteVue.AR Home.app** into `~/Applications` and puts a shortcut on the Desktop (`--dock` also pins it to the Dock). It opens the live site in its own square window that zooms when resized, and falls back to a bundled copy when offline. Re-run the script after web changes to refresh that offline copy. Keys: arrows = swipe, Return = pinch, Esc = back, ⌘R = reload, ⌘0 = lens size.
+- **Any browser:** open https://kretsyboy.github.io/vision-home/. Chrome and Edge also offer **Install** in the address bar, using `manifest.webmanifest`.
