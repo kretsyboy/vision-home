@@ -224,10 +224,11 @@ const now = () => Date.now();
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
-const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, wall:.45, tab:'apps',
+const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, wall:.7, tab:'apps',
   people:[], notes:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
+if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; } // the SiteVue-palette wallpaper is darker, so start it stronger once
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
 function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
@@ -791,12 +792,16 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 
 
 /* ---------- boot ---------- */
+const WALL_SPEED = .6; // wallpaper plays at 60% of its recorded speed
+// some browsers reset the rate when the source (re)loads
+$('#wall').addEventListener('loadedmetadata', e => { e.target.defaultPlaybackRate = e.target.playbackRate = WALL_SPEED; });
 function apply(){
   const r = document.documentElement.style;
   r.setProperty('--accent', P.accent); r.setProperty('--ts', P.ts); r.setProperty('--bright', P.bright);
   document.body.classList.toggle('reduce', P.reduce);
   r.setProperty('--wall', P.wall);
   const w = $('#wall'); // Reduce Motion freezes the wallpaper; 0% stops decoding entirely
+  w.defaultPlaybackRate = w.playbackRate = WALL_SPEED;
   if(P.reduce || P.wall <= 0) w.pause(); else w.play().catch(() => {});
 }
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});

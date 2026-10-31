@@ -13,9 +13,9 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 | Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Do Not Disturb, Reduce Motion, Recenter, Settings and Tips. |
 | Windows on glass, with a close button and window bar below | Each app opens in a glass window that springs out of its icon. Below the window are **×** and the window bar. Pinch the bar, then swipe or pinch-and-drag to move the window, and pinch again to drop it. |
 | People tab | The people you add, with their local time |
-| Wallpaper | A slow blue plasma video loops behind Home. It fades back when a window or Control Center is open. Set its strength in **Settings → Wallpaper** (default 45%, 0% turns it off). **Reduce Motion** freezes it. |
+| Wallpaper | A slow plasma video in the SiteVue palette (navy-black, electric indigo, periwinkle and white, sampled from the SiteVue AI artwork) loops behind Home at 60% speed, so it drifts slowly. It fades back when a window or Control Center is open. Set its strength in **Settings → Wallpaper** (default 70%, 0% turns it off). **Reduce Motion** freezes it. |
 
-**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge. For the same reason, the wallpaper tints your whole view blue and uses more battery than a black background, so lower it in Settings if the world looks too blue.
+**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge. For the same reason, the wallpaper's lit areas tint your view indigo and use more battery than black, so lower it in Settings if the world looks too tinted. Its dark navy areas stay nearly see-through.
 
 ## Apps
 
