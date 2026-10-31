@@ -31,7 +31,7 @@ button,textarea,input{font:inherit;color:inherit;background:none;border:0;paddin
   -webkit-tap-highlight-color:transparent}
 :focus{outline:none}
 svg{display:block}
-#stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000}
+#stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000;border-radius:48px;isolation:isolate} /* rounded lens corners */
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
 /* Transparency (--see) fades the whole app so the outside world shows through the lens; capped at 85% so it never vanishes */
@@ -231,7 +231,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 
 /* desktop testing only: frame the 600x600 lens */
 @media (min-width:700px) and (min-height:700px){
-  #stage{border-radius:14px;outline:1px solid #2a2a2e}
+  #stage{outline:1px solid #2a2a2e}
   #help{display:block}
 }
 #help{display:none;position:fixed;bottom:14px;left:0;right:0;text-align:center;color:#666;font-size:13px}
@@ -953,7 +953,7 @@ function runIntro(){
 }
 
 /* ---------- boot ---------- */
-const WALL_SPEED = 1; // the file is already slowed to 60% (360x360, 18 fps), so it plays at its native rate - cheapest to decode
+const WALL_SPEED = 1; // the file is already slowed to 60% (600x600, 18 fps), so it plays at its native rate - cheaper to decode
 // some browsers reset the rate when the source (re)loads
 $('#wall').addEventListener('loadedmetadata', e => { e.target.defaultPlaybackRate = e.target.playbackRate = WALL_SPEED; });
 function apply(){

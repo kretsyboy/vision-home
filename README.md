@@ -1,6 +1,6 @@
 # SiteVue.AR Home: a visionOS-style menu for Meta Ray-Ban Display
 
-This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. It is a single `index.html` file (about 69 KB) with no build step, plus two PNG icons and a seamlessly looping wallpaper video (`wallpaper.mp4`, 360×360 at 18 fps, 30 s, 2.5 MB, scaled up to fill the lens, with `wallpaper.jpg` shown while it loads).
+This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. The app area has rounded 48 px corners. It is a single `index.html` file (about 69 KB) with no build step, plus two PNG icons and a seamlessly looping wallpaper video (`wallpaper.mp4`, 600×600 at 18 fps, 30 s, 4.9 MB, with `wallpaper.jpg` shown while it loads).
 
 ## What carries over from Vision Pro, and how
 
@@ -62,7 +62,7 @@ On a laptop, use the arrow keys, Enter and Esc. Mouse hover acts as gaze, and cl
 ## Performance on the glasses
 
 The glasses have a small mobile chip and a 30 Hz display, so the app keeps continuous work low:
-- The wallpaper is 360×360 at 18 fps with its slowdown built in: about 4–5× less video decoding than a 600×600, 30 fps clip slowed by the browser.
+- The wallpaper is 600×600 at 18 fps with its slowdown built in: about 40% less video decoding than a 30 fps clip slowed by the browser, at full sharpness. (A 360×360 version decoded 4–5× less but looked visibly softer.)
 - Brightness defaults to 100%, because below 100% the whole interface has to be blended over the moving video on every frame.
 - Highlight glows use small blur radii, and the intro uses 7 layers per piece.
 - **Reduce Motion** pauses the wallpaper and skips the 3D intro, for the lightest possible load.
