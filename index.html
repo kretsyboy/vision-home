@@ -14,10 +14,10 @@
 <style>
 /* 600x600 additive waveguide: black = transparent, so "glass" is a dim lit fill, never a backdrop blur. */
 :root{
-  --accent:#64d2ff; --ts:1; --bright:.9;
+  --accent:#64d2ff; --ts:1; --bright:1;
   --glass-a:rgba(255,255,255,.12); --glass-b:rgba(255,255,255,.055); --glass-2:rgba(255,255,255,.14);
   --edge:rgba(255,255,255,.16); --ink:#fff; --ink-2:rgba(255,255,255,.68); --ink-3:rgba(255,255,255,.44);
-  --halo:0 0 0 3px rgba(255,255,255,.92),0 0 26px rgba(255,255,255,.34);
+  --halo:0 0 0 3px rgba(255,255,255,.92),0 0 10px rgba(255,255,255,.3);
   --spring:cubic-bezier(.2,.9,.25,1.12); --ease:cubic-bezier(.25,.8,.25,1);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
@@ -75,7 +75,7 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .icon .nm{font-size:.95rem;font-weight:600;color:var(--ink-2);white-space:nowrap;line-height:1.15;text-align:center}
 .icon .nm small{display:block;font-size:.8rem;font-weight:500;color:var(--ink-3)}
 /* gaze highlight: the disc lifts, the glyph layer moves further than the backplate (parallax) */
-.icon:focus .disc{scale:1.12;box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 30px var(--c1)}
+.icon:focus .disc{scale:1.12;box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 14px var(--c1)}
 .icon:focus .fg{scale:1.08;translate:0 -3px}
 .icon:focus .nm{color:#fff}
 .empty{position:absolute;left:110px;right:24px;top:300px;text-align:center}
@@ -268,11 +268,12 @@ const now = () => Date.now();
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
-const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, wall:.7, see:0, tab:'apps',
+const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, wall:.7, see:0, tab:'apps',
   people:[], notes:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
-if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; } // the SiteVue-palette wallpaper is darker, so start it stronger once
+if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; }
+if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend // the SiteVue-palette wallpaper is darker, so start it stronger once
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
 function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
@@ -883,7 +884,7 @@ const LOGO = [[-1.3,6.1,370.4,262.7,"M206.7 7.1C214.4 6.1 222.1 6.6 229.5 8.6L35
 function runIntro(){
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
-  const DEPTH = 12, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
+  const DEPTH = 6, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
@@ -916,10 +917,10 @@ function runIntro(){
   [...pcs.children].forEach((el, i) => {
     const x = rand(300), y = rand(250), z = -220 + Math.random() * 300, a = rand(70), b = rand(80), c = rand(120);
     el.animate([
-      { transform:T(x * 1.3, y * 1.3, z - 1600, a - 40, b - 40, c - 60, 2), '--dz':'1.8px', easing:'ease-out' }, // fly in from deep space
-      { transform:T(x, y, z, a, b, c, 2), '--dz':'1.8px', offset:.383, easing:'linear' },                        // float, thick
-      { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), '--dz':'1.8px', offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
-      { '--dz':'1.8px', offset:.9, easing:'ease-in' },                                                      // still thick on approach...
+      { transform:T(x * 1.3, y * 1.3, z - 1600, a - 40, b - 40, c - 60, 2), '--dz':'3.6px', easing:'ease-out' }, // fly in from deep space
+      { transform:T(x, y, z, a, b, c, 2), '--dz':'3.6px', offset:.383, easing:'linear' },                        // float, thick
+      { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), '--dz':'3.6px', offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
+      { '--dz':'3.6px', offset:.9, easing:'ease-in' },                                                      // still thick on approach...
       { transform:T(0, 0, 0, 0, 0, 0), '--dz':'0px' }                                                       // ...flat once locked in
     ], { duration:INTRO_MS, delay:i * 30, fill:'both' });
   });
@@ -935,7 +936,7 @@ function runIntro(){
 }
 
 /* ---------- boot ---------- */
-const WALL_SPEED = .6; // wallpaper plays at 60% of its recorded speed
+const WALL_SPEED = 1; // the file is already slowed to 60% (360x360, 18 fps), so it plays at its native rate - cheapest to decode
 // some browsers reset the rate when the source (re)loads
 $('#wall').addEventListener('loadedmetadata', e => { e.target.defaultPlaybackRate = e.target.playbackRate = WALL_SPEED; });
 function apply(){
