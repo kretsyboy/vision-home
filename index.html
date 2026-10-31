@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=600, height=600, initial-scale=1.0, user-scalable=no">
+<meta name="description" content="SiteVue.AR Home: a visionOS-style Home View, apps and Control Center for the Meta Ray-Ban Display lens, driven by the Meta Neural Band.">
+<meta name="application-name" content="SiteVue.AR Home">
+<meta name="mrbd-web-app-capable" content="yes">
+<link rel="icon" href="icon-96.png" sizes="96x96">
+<link rel="apple-touch-icon" href="apple-touch-icon.png" sizes="180x180">
+<title>SiteVue.AR Home</title>
+<style>
+/* 600x600 additive waveguide: black = transparent, so "glass" is a dim lit fill, never a backdrop blur. */
+:root{
+  --accent:#64d2ff; --ts:1; --bright:.9;
+  --glass-a:rgba(255,255,255,.12); --glass-b:rgba(255,255,255,.055); --glass-2:rgba(255,255,255,.14);
+  --edge:rgba(255,255,255,.16); --ink:#fff; --ink-2:rgba(255,255,255,.68); --ink-3:rgba(255,255,255,.44);
+  --halo:0 0 0 3px rgba(255,255,255,.92),0 0 26px rgba(255,255,255,.34);
+  --spring:cubic-bezier(.2,.9,.25,1.12); --ease:cubic-bezier(.25,.8,.25,1);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{font-size:calc(16px * var(--ts))}
+html,body{margin:0;height:100%;background:#000;color:var(--ink);font-family:var(--font);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
+/* touch-action:none opts in to Neural Band pinch-and-drag (pointer events); read once at load */
+body{touch-action:none;display:grid;place-items:center;min-width:600px;min-height:600px}
+button,textarea,input{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+:focus{outline:none}
+svg{display:block}
+#stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000}
+#env{position:absolute;inset:0;transition:opacity .5s var(--ease)}
+#ui{position:absolute;inset:0;opacity:var(--bright)}
+.glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.g2{background:var(--glass-2);border-radius:22px}
+.eyebrow{font-size:.82rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.title{font-size:1.75rem;font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.sub{color:var(--ink-2);font-size:1.05rem}
+.dim{color:var(--ink-3)}
+button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--halo)}
+
+/* ---------- Home View ---------- */
+#home{position:absolute;inset:0;transition:opacity .35s var(--ease),scale .45s var(--spring)}
+#home.behind{opacity:0;scale:.9;pointer-events:none}
+#home.dimmed{opacity:.06}
+#ccBtn{position:absolute;top:10px;left:50%;translate:-50% 0;width:64px;height:40px;border-radius:20px;
+  display:grid;place-items:center;color:var(--ink-2);transition:width .25s var(--spring),color .2s}
+#ccBtn svg{width:26px;height:26px}
+#ccBtn:focus{width:84px;color:#fff}
+.tabs{position:absolute;left:14px;top:50%;translate:0 -50%;display:flex;flex-direction:column;gap:10px;
+  padding:8px;border-radius:40px;z-index:2}
+.tab{position:relative;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2)}
+.tab svg{width:28px;height:28px}
+.tab.sel{background:rgba(255,255,255,.22);color:#fff}
+.tab .lbl{position:absolute;left:66px;top:50%;translate:0 -50%;white-space:nowrap;font-size:1.05rem;font-weight:600;
+  padding:10px 16px;border-radius:22px;background:rgba(40,40,44,.96);border:1px solid var(--edge);
+  opacity:0;scale:.85;transform-origin:left center;pointer-events:none;transition:opacity .18s,scale .25s var(--spring)}
+.tab:focus .lbl{opacity:1;scale:1}
+.icon{position:absolute;width:96px;display:flex;flex-direction:column;align-items:center;gap:9px;border-radius:50%}
+.icon:focus{box-shadow:none}
+.disc{position:relative;width:88px;height:88px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
+.disc .bg{position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 34% 24%,var(--c1),var(--c2) 78%)}
+.disc::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.42),transparent 52%);pointer-events:none}
+.disc .fg{position:absolute;inset:0;display:grid;place-items:center;transition:translate .3s var(--spring),scale .3s var(--spring)}
+.disc .fg svg{width:44px;height:44px}
+.disc .ini{font-size:30px;font-weight:700;letter-spacing:.02em}
+.icon .nm{font-size:.95rem;font-weight:600;color:var(--ink-2);white-space:nowrap;line-height:1.15;text-align:center}
+.icon .nm small{display:block;font-size:.8rem;font-weight:500;color:var(--ink-3)}
+/* gaze highlight: the disc lifts, the glyph layer moves further than the backplate (parallax) */
+.icon:focus .disc{scale:1.12;box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 30px var(--c1)}
+.icon:focus .fg{scale:1.08;translate:0 -3px}
+.icon:focus .nm{color:#fff}
+.icon .check{position:absolute;right:-2px;top:-2px;width:28px;height:28px;border-radius:50%;background:#fff;color:#000;
+  display:grid;place-items:center;z-index:1}
+.icon .check svg{width:18px;height:18px;stroke-width:3}
+.empty{position:absolute;left:110px;right:24px;top:300px;text-align:center}
+.crown{position:absolute;left:120px;width:440px;top:410px}
+.status{position:absolute;bottom:16px;left:50%;translate:-50% 0;display:flex;align-items:center;gap:14px;
+  padding:9px 20px;border-radius:24px;font-size:1rem;font-weight:600;white-space:nowrap}
+.status .sep{width:4px;height:4px;border-radius:50%;background:var(--ink-3)}
+.status .live{color:var(--accent)}
+.bat{display:inline-flex;align-items:center;gap:6px}
+.bat svg{width:26px;height:26px}
+
+/* ---------- Sliders (Digital Crown analogue) ---------- */
+.slider{display:flex;align-items:center;gap:14px;width:100%;height:64px;padding:0 20px;border-radius:32px;
+  background:var(--glass-2);text-align:left}
+.slider svg{width:26px;height:26px;flex:0 0 auto}
+.slider .sl-l{font-weight:600;font-size:1.05rem;width:108px;flex:0 0 auto}
+.slider .track{flex:1;height:12px;border-radius:6px;background:rgba(255,255,255,.16);overflow:hidden}
+.slider .track i{display:block;height:100%;background:#fff;border-radius:6px}
+.slider .sl-v{width:52px;text-align:right;font-weight:600;color:var(--ink-2)}
+.slider:focus .track i{background:var(--accent)}
+
+/* ---------- Windows ---------- */
+#win{position:absolute;inset:0;display:none;--wx:0px;--wy:0px}
+#win.open{display:block}
+.window{position:absolute;left:30px;top:22px;width:540px;height:480px;border-radius:38px;padding:22px 26px;
+  display:flex;flex-direction:column;gap:12px;translate:var(--wx) var(--wy)}
+.window.enter{animation:winIn .42s var(--spring)}
+@keyframes winIn{from{scale:.2;opacity:0}to{scale:1;opacity:1}}
+.winbar{position:absolute;top:514px;left:50%;display:flex;align-items:center;gap:12px;
+  translate:calc(-50% + var(--wx)) var(--wy)}
+.winbar .close{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2)}
+.winbar .close svg{width:22px;height:22px}
+.winbar .grab{width:170px;height:48px;border-radius:24px;display:grid;place-items:center}
+.winbar .grab i{display:block;width:130px;height:10px;border-radius:5px;background:rgba(255,255,255,.42)}
+.winbar .grab.moving i{background:var(--accent);box-shadow:0 0 18px var(--accent)}
+.row2{display:flex;gap:10px}
+.btn{min-height:58px;border-radius:29px;padding:0 24px;font-weight:600;font-size:1.1rem;background:var(--glass-2);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;flex:1}
+.btn.primary{background:var(--accent);color:#000}
+.btn.danger{color:#ff8a84}
+.btn svg{width:22px;height:22px}
+.list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px;scrollbar-width:none}
+.list::-webkit-scrollbar{display:none}
+.lrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:62px;padding:10px 20px;
+  border-radius:22px;background:var(--glass-b);text-align:left;font-size:1.08rem;flex:0 0 auto}
+.lrow b{font-weight:600}
+.lrow .r{color:var(--ink-2);text-align:right;white-space:nowrap}
+.lrow .sw{width:26px;height:26px;border-radius:50%}
+.lrow .tog{width:52px;height:32px;border-radius:16px;background:rgba(255,255,255,.2);position:relative;flex:0 0 auto}
+.lrow .tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .2s var(--spring)}
+.lrow .tog.on{background:#30d158}
+.lrow .tog.on::after{left:23px}
+.spin{display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:0 20px;border-radius:31px;
+  background:var(--glass-2);font-size:1.2rem;font-weight:600;width:100%}
+.spin .ar{color:var(--ink-3);font-size:1.1rem}
+.spin:focus .ar{color:var(--accent)}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;flex:1}
+
+/* app specifics */
+.bigtime{font-size:5.4rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+.wc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.wcard{padding:12px 18px;border-radius:22px;background:var(--glass-b)}
+.wcard b{display:block;font-size:1.7rem;font-weight:600}
+.wcard small{color:var(--ink-3);font-size:.9rem}
+.ring{position:relative;width:220px;height:220px;margin:0 auto}
+.ring svg{width:220px;height:220px;rotate:-90deg}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;font-size:3.2rem;font-weight:600;letter-spacing:-.02em}
+.ring .rt small{display:block;font-size:.95rem;font-weight:500;color:var(--ink-2);text-align:center;letter-spacing:0}
+.presets{display:flex;gap:8px}
+.presets .btn{min-height:52px;padding:0 10px;font-size:1rem}
+.presets .btn.on{background:#fff;color:#000}
+.swtime{font-size:4.6rem;font-weight:600;letter-spacing:-.03em;text-align:center;line-height:1.1}
+.calc-d{text-align:right;font-weight:500;line-height:1;padding:6px 8px 4px;min-height:70px;white-space:nowrap;overflow:hidden}
+.calc-d small{display:block;font-size:1rem;color:var(--ink-3);min-height:20px}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1}
+.keys button{border-radius:24px;background:var(--glass-2);font-size:1.5rem;font-weight:600}
+.keys .op{background:rgba(255,159,10,.85);color:#000}
+.keys .op.on{background:#fff}
+.keys .fn{background:rgba(255,255,255,.3)}
+.flower{position:relative;width:240px;height:240px;margin:6px auto;animation:breathe 10s var(--ease) infinite}
+.flower i{position:absolute;left:65px;top:65px;width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,rgba(150,255,240,.75),rgba(30,180,170,.35) 70%);mix-blend-mode:screen}
+@keyframes breathe{0%{scale:.32;rotate:0deg}40%{scale:1;rotate:45deg}100%{scale:.32;rotate:0deg}}
+.dial{position:relative;width:230px;height:230px;margin:0 auto}
+.dial svg{width:230px;height:230px;transition:rotate .2s linear}
+.dial .needle{position:absolute;left:50%;top:-4px;translate:-50% 0;width:0;height:0;
+  border-left:10px solid transparent;border-right:10px solid transparent;border-top:16px solid var(--accent)}
+.wx-now{display:flex;align-items:center;gap:20px}
+.wx-now .t{font-size:5rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+.wx-days{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wx-days div{background:var(--glass-b);border-radius:18px;padding:10px 4px;text-align:center;font-size:.95rem}
+.wx-days b{display:block;font-size:1.15rem}
+textarea{width:100%;flex:1;min-height:0;resize:none;border-radius:24px;background:var(--glass-b);padding:16px 18px;
+  font-size:1.25rem;line-height:1.35;cursor:text}
+input[type=text]{width:100%;height:62px;border-radius:31px;background:var(--glass-2);padding:0 22px;font-size:1.2rem;cursor:text}
+textarea::placeholder,input::placeholder{color:var(--ink-3)}
+.avatar-lg .disc{width:120px;height:120px}
+.avatar-lg .disc .ini{font-size:42px}
+
+/* ---------- Control Center ---------- */
+#cc{position:absolute;inset:0;display:none}
+#cc.open{display:block}
+.ccpanel{position:absolute;left:56px;top:18px;width:488px;border-radius:38px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.ccpanel.enter{animation:ccIn .38s var(--spring)}
+@keyframes ccIn{from{translate:0 -40px;opacity:0}to{translate:0 0;opacity:1}}
+.cchead{display:flex;justify-content:space-between;align-items:flex-start;padding:0 6px}
+.cctime{font-size:2.6rem;font-weight:600;letter-spacing:-.02em;line-height:1}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{height:92px;border-radius:26px;background:var(--glass-2);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:7px;font-size:.88rem;font-weight:600;text-align:center;line-height:1.1}
+.tile svg{width:28px;height:28px}
+.tile.on{background:rgba(255,255,255,.88);color:#000}
+
+/* ---------- toast ---------- */
+#toast{position:absolute;top:14px;left:50%;translate:-50% -80px;padding:12px 22px;border-radius:26px;font-size:1.05rem;
+  font-weight:600;white-space:nowrap;z-index:9;transition:translate .35s var(--spring),opacity .25s;opacity:0;pointer-events:none;
+  background:rgba(44,44,48,.97);border:1px solid var(--edge)}
+#toast.show{translate:-50% 0;opacity:1}
+
+.reduce *{transition:none!important}
+.reduce .window,.reduce .ccpanel{animation:none!important}
+
+/* desktop testing only: frame the 600x600 lens */
+@media (min-width:700px) and (min-height:700px){
+  #stage{border-radius:14px;outline:1px solid #2a2a2e}
+  #help{display:block}
+}
+#help{display:none;position:fixed;bottom:14px;left:0;right:0;text-align:center;color:#666;font-size:13px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="env" width="600" height="600" aria-hidden="true"></canvas>
+  <div id="ui">
+    <div id="home"></div>
+    <div id="win" role="dialog"></div>
+    <div id="cc" role="dialog" aria-label="Control Center"></div>
+  </div>
+  <div id="toast" role="status"></div>
+</div>
+<div id="help">Arrow keys = thumb swipe · Enter = index pinch · Esc = back (middle pinch) · mouse hover = gaze</div>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const h = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const now = () => Date.now();
+
+/* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
+const KEY = 'sitevue-ar-home-v1';
+const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, env:'none', imm:.45, tab:'apps',
+  people:[], notes:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
+const P = Object.assign({}, DEF, load());
+function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
+
+/* ---------- glyphs ---------- */
+const G = {
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
+  weather:'<circle cx="9" cy="8.5" r="3"/><path d="M9 2.5v1.4M3.5 8.5H2.2M4.6 4.1l1 1M13.4 4.1l-1 1"/><path d="M8 20h9a3.5 3.5 0 0 0 .4-7 4.6 4.6 0 0 0-8.9 1.2A2.9 2.9 0 0 0 8 20z"/>',
+  timer:'<path d="M7 3h10M7 21h10M8 3v2.5a4 4 0 0 0 1.7 3.3L12 10.5l2.3-1.7A4 4 0 0 0 16 5.5V3M8 21v-2.5a4 4 0 0 1 1.7-3.3L12 13.5l2.3 1.7a4 4 0 0 1 1.7 3.3V21"/>',
+  stopwatch:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M12 2.5V6M18.4 6.6l1.4-1.4"/>',
+  mind:Array.from({length:6}, (_, i) => { const a = i * Math.PI / 3;
+    return `<circle cx="${(12 + 4.2 * Math.cos(a)).toFixed(2)}" cy="${(12 + 4.2 * Math.sin(a)).toFixed(2)}" r="4"/>`; }).join(''),
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  notes:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
+  calc:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 18.5h.01M12 18.5h3.5"/>',
+  tips:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  settings:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/>',
+  apps:'<circle cx="7" cy="7" r="2.7"/><circle cx="17" cy="7" r="2.7"/><circle cx="7" cy="17" r="2.7"/><circle cx="17" cy="17" r="2.7"/>',
+  people:'<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+  env:'<path d="M2.5 19.5l6-10 4 6 2.5-3.5 6.5 7.5z"/><circle cx="17" cy="6" r="2"/>',
+  chev:'<path d="M6 9.5l6 5 6-5"/>', x:'<path d="M7 7l10 10M17 7L7 17"/>', plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+  moon:'<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
+  motion:'<path d="M3 12h3.5l2-5 4 10 2-5H21"/>',
+  recenter:'<circle cx="12" cy="12" r="3"/><path d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4"/>',
+  speak:'<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  trash:'<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
+  loc:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>',
+  refresh:'<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15"/>',
+};
+const svg = (k, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${G[k]}</svg>`;
+function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="7" width="21" height="10" rx="3"/><path d="M25.5 10.5v3" stroke-linecap="round"/><rect x="4" y="9" width="${Math.max(1.5, 17 * p).toFixed(1)}" height="6" rx="1.5" fill="currentColor" stroke="none"/></svg>`; }
+
+/* ---------- catalog ---------- */
+const APPS = [
+  { id:'clock', name:'Clock', bg:['#ffffff','#b9b9c0'], ink:'#111' },
+  { id:'weather', name:'Weather', bg:['#8fd0ff','#2f7bff'] },
+  { id:'timer', name:'Timer', bg:['#ffd466','#ff9500'] },
+  { id:'stopwatch', name:'Stopwatch', bg:['#ff9a8c','#ff3b30'] },
+  { id:'mind', name:'Mindfulness', bg:['#8af7e6','#14b0a3'] },
+  { id:'compass', name:'Compass', bg:['#b1afff','#5856d6'] },
+  { id:'notes', name:'Notes', bg:['#fff48a','#ffcc00'], ink:'#2a2200' },
+  { id:'calc', name:'Calculator', bg:['#c2c2c7','#5c5c61'] },
+  { id:'tips', name:'Tips', bg:['#ecb8ff','#af52de'] },
+  { id:'settings', name:'Settings', bg:['#e0e0e5','#8e8e93'], ink:'#1c1c1e' },
+];
+const ENVS = [
+  { id:'none', name:'None', bg:'radial-gradient(circle at 40% 30%,#5a5a60,#18181a 75%)' },
+  { id:'moon', name:'The Moon', bg:'radial-gradient(circle at 35% 28%,#f0f0f0,#7a7a7a 55%,#2b2b2b)' },
+  { id:'haleakala', name:'Haleakalā', bg:'linear-gradient(180deg,#4a3489 0%,#ff7a59 58%,#ffd27a 100%)' },
+  { id:'yosemite', name:'Yosemite', bg:'linear-gradient(180deg,#a7c9ec 0%,#eef4fb 52%,#6f8193 100%)' },
+  { id:'hood', name:'Mount Hood', bg:'linear-gradient(180deg,#5d6d7a 0%,#a8b6c0 48%,#3e4c42 100%)' },
+  { id:'joshua', name:'Joshua Tree', bg:'radial-gradient(circle at 60% 30%,#7a68e0,#1c1948 68%)' },
+  { id:'jupiter', name:'Jupiter', bg:'repeating-linear-gradient(170deg,#e2bd93 0 9px,#a8714f 9px 15px,#f3e1c6 15px 23px)' },
+];
+const CITIES = [
+  ['New York','America/New_York'],['Chicago','America/Chicago'],['Denver','America/Denver'],['Phoenix','America/Phoenix'],
+  ['Los Angeles','America/Los_Angeles'],['Anchorage','America/Anchorage'],['Honolulu','Pacific/Honolulu'],['Toronto','America/Toronto'],
+  ['Mexico City','America/Mexico_City'],['São Paulo','America/Sao_Paulo'],['London','Europe/London'],['Paris','Europe/Paris'],
+  ['Berlin','Europe/Berlin'],['Dubai','Asia/Dubai'],['Mumbai','Asia/Kolkata'],['Singapore','Asia/Singapore'],
+  ['Tokyo','Asia/Tokyo'],['Seoul','Asia/Seoul'],['Sydney','Australia/Sydney'],
+];
+const WORLD = [['London','Europe/London'],['Tokyo','Asia/Tokyo'],['New York','America/New_York'],['Sydney','Australia/Sydney']];
+const ACCENTS = [['Blue','#64d2ff'],['Mint','#63e6be'],['Amber','#ffc53d'],['Pink','#ff7eb6'],['Violet','#b49cff']];
+const TEXT = [['Small',.9],['Default',1],['Large',1.12]];
+
+/* ---------- formatting ---------- */
+const fmtTime = (d, tz) => d.toLocaleTimeString([], { hour:'numeric', minute:'2-digit', timeZone:tz });
+const fmtDate = d => d.toLocaleDateString([], { weekday:'long', month:'long', day:'numeric' });
+function fmtDur(ms, tenths){
+  ms = Math.max(0, ms); const t = tenths ? ms / 1000 : Math.ceil(ms / 1000), hh = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = Math.floor(t % 60);
+  const base = (hh ? hh + ':' + String(m).padStart(2,'0') : m) + ':' + String(s).padStart(2,'0');
+  return tenths ? base + '.' + Math.floor((ms % 1000) / 100) : base;
+}
+function tzDiff(tz){
+  const d = new Date(), a = new Date(d.toLocaleString('en-US', { timeZone:tz })), b = new Date(d.toLocaleString('en-US'));
+  const hrs = Math.round((a - b) / 1800000) / 2;
+  return hrs === 0 ? 'Same time' : (hrs > 0 ? '+' : '−') + Math.abs(hrs) + ' hr';
+}
+const initials = n => n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+function hue(n){ let x = 0; for(const c of n) x = (x * 31 + c.charCodeAt(0)) % 360; return x; }
+
+/* ---------- view state + history (host allows 5 entries; we never go deeper than 3) ---------- */
+let V = {}, winAnim = false, ccAnim = false, moving = false, confirmKey = null, restore = {};
+const homeEl = $('#home'), winEl = $('#win'), ccEl = $('#cc');
+function open(app, arg){
+  const st = { app, arg };
+  if(!V.app && !V.cc) history.pushState(st, ''); else history.replaceState(st, '');
+  setView(st);
+}
+function sub(arg){
+  const st = { app:V.app, arg };
+  if(V.arg === undefined) history.pushState(st, ''); else history.replaceState(st, '');
+  setView(st);
+}
+function openCC(){ history.pushState({ cc:1 }, ''); setView({ cc:1 }); }
+function back(){ if(V.app || V.cc) history.back(); }
+addEventListener('popstate', e => setView(e.state || {}));
+function setView(st){
+  const prev = V; V = st || {};
+  if(V.app && !prev.app) winAnim = true;
+  if(V.cc && !prev.cc) ccAnim = true;
+  if(!V.app) moving = false;
+  confirmKey = null;
+  render(true);
+}
+
+/* ---------- render ---------- */
+function render(fresh){
+  const a = document.activeElement, keep = !fresh && a && a.dataset && a.dataset.k;
+  homeEl.innerHTML = homeHTML();
+  homeEl.classList.toggle('behind', !!V.app);
+  homeEl.classList.toggle('dimmed', !!V.cc);
+  winEl.classList.toggle('open', !!V.app);
+  winEl.innerHTML = V.app ? winHTML() : '';
+  ccEl.classList.toggle('open', !!V.cc);
+  ccEl.innerHTML = V.cc ? ccHTML() : '';
+  winAnim = ccAnim = false;
+  drawEnv(performance.now());
+  const scope = V.cc ? ccEl : V.app ? winEl : homeEl;
+  const want = keep || (!V.app && !V.cc && restore[P.tab]);
+  let el = want && scope.querySelector(`[data-k="${CSS.escape(want)}"]`);
+  if(!el) el = scope.querySelector('[data-default]') || focusables(scope)[0];
+  if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' }); }
+}
+const focusables = s => [...s.querySelectorAll('button,textarea,input,[tabindex="0"]')].filter(e => e.getClientRects().length);
+
+function discHTML(c1, c2, ink, inner, bgStyle){
+  return `<span class="disc" style="--c1:${c1};--c2:${c2};color:${ink || '#fff'}"><span class="bg"${bgStyle ? ` style="background:${bgStyle}"` : ''}></span><span class="fg">${inner}</span></span>`;
+}
+/* honeycomb: rows of 3-4-3, centered on the area right of the tab bar */
+function honey(n, rows = [3,4,3], y0 = 120, dy = 134){
+  const out = []; let r = 0;
+  while(out.length < n && r < rows.length){
+    const cnt = rows[r];
+    for(let i = 0; i < cnt && out.length < n; i++) out.push({ x:340 + (i - (cnt - 1) / 2) * 116, y:y0 + r * dy });
+    r++;
+  }
+  return out;
+}
+const at = p => `left:${p.x - 48}px;top:${p.y - 44}px`;
+
+function homeHTML(){
+  const tabs = [['apps','Apps'],['people','People'],['env','Environments']].map(([id, l]) =>
+    `<button class="tab ${P.tab === id ? 'sel' : ''}" data-k="tab-${id}" data-act="tab" data-v="${id}" aria-label="${l}">${svg(id)}<span class="lbl">${l}</span></button>`).join('');
+  return `<button id="ccBtn" class="glass" data-k="cc" data-act="cc" aria-label="Control Center">${svg('chev')}</button>
+    <nav class="tabs glass">${tabs}</nav>${gridHTML()}
+    <div class="status glass" data-live="status">${statusHTML()}</div>`;
+}
+function gridHTML(){
+  if(P.tab === 'people'){
+    const list = P.people.slice(0, 9), pos = honey(list.length + 1);
+    const html = list.map((p, i) => `<button class="icon" style="${at(pos[i])}" data-k="person-${i}" data-act="person" data-v="${i}" ${i ? '' : 'data-default'} aria-label="${h(p.name)}">
+        ${discHTML(`hsl(${hue(p.name)} 85% 72%)`, `hsl(${hue(p.name)} 70% 42%)`, '#fff', `<span class="ini">${h(initials(p.name))}</span>`)}
+        <span class="nm">${h(p.name)}<small data-live-tz="${p.tz}">${fmtTime(new Date(), p.tz)}</small></span></button>`).join('');
+    const add = P.people.length < 9 ? `<button class="icon" style="${at(pos[list.length])}" data-k="person-add" data-act="addPerson" ${list.length ? '' : 'data-default'} aria-label="Add person">
+        ${discHTML('#5a5a60', '#2a2a2e', '#fff', svg('plus'))}<span class="nm">Add</span></button>` : '';
+    const hint = list.length ? '' : `<div class="empty sub" style="top:${pos[0].y + 90}px">Add the people you keep in touch with to see their local time at a glance.</div>`;
+    return html + add + hint;
+  }
+  if(P.tab === 'env'){
+    const pos = honey(ENVS.length, [3,4], 112, 128);
+    return ENVS.map((e, i) => `<button class="icon" style="${at(pos[i])}" data-k="env-${e.id}" data-act="env" data-v="${e.id}" ${P.env === e.id ? 'data-default' : ''} aria-label="${e.name}">
+        ${P.env === e.id ? `<span class="check">${svg('check')}</span>` : ''}${discHTML('#fff', '#888', '#fff', '', e.bg)}
+        <span class="nm">${e.name}</span></button>`).join('')
+      + `<div class="crown">${sliderHTML('imm', 'Immersion', 'env', P.imm)}</div>`;
+  }
+  const pos = honey(APPS.length);
+  return APPS.map((a, i) => `<button class="icon" style="${at(pos[i])}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${i ? '' : 'data-default'} aria-label="${a.name}">
+      ${discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id))}<span class="nm">${a.name}</span></button>`).join('');
+}
+function statusHTML(){
+  const d = new Date();
+  let s = `<span>${fmtTime(d)}</span><span class="sep"></span><span>${d.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })}</span>`;
+  if(BAT) s += `<span class="sep"></span><span class="bat">${batSvg(BAT.level)}${Math.round(BAT.level * 100)}%</span>`;
+  if(P.timer.end) s += `<span class="sep"></span><span class="live">${fmtDur(P.timer.end - now())}</span>`;
+  else if(P.sw.start) s += `<span class="sep"></span><span class="live">${fmtDur(swElapsed())}</span>`;
+  if(P.dnd) s += `<span class="sep"></span><span class="bat" style="color:#b49cff">${svg('moon')}</span>`;
+  return s;
+}
+function sliderHTML(key, label, icon, val){
+  const pct = Math.round(val * 100);
+  return `<button class="slider" data-k="sl-${key}" data-slider="${key}" role="slider" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+    ${svg(icon)}<span class="sl-l">${label}</span><span class="track"><i style="width:${pct}%"></i></span><span class="sl-v">${pct}%</span></button>`;
+}
+function winHTML(){
+  const body = (VIEWS[V.app] || (() => ''))(V.arg);
+  const o = ORIGIN ? ` style="transform-origin:${ORIGIN.x - 30}px ${ORIGIN.y - 22}px"` : '';
+  if(winAnim) setTimeout(() => ORIGIN = null, 500);
+  return `<div class="window glass ${winAnim ? 'enter' : ''}"${o}>${body}</div>
+    <div class="winbar"><button class="close glass" data-k="close" data-act="close" aria-label="Close">${svg('x')}</button>
+    <button class="grab ${moving ? 'moving' : ''}" data-k="grab" data-act="grab" aria-label="${moving ? 'Done moving' : 'Move window'}"><i></i></button></div>`;
+}
+function ccHTML(){
+  const d = new Date();
+  const tile = (k, l, icon, on) => `<button class="tile ${on ? 'on' : ''}" data-k="t-${k}" data-act="tile" data-v="${k}" aria-pressed="${!!on}">${svg(icon)}${l}</button>`;
+  return `<div class="ccpanel glass ${ccAnim ? 'enter' : ''}">
+    <div class="cchead"><div><div class="cctime" data-live="ccTime">${fmtTime(d)}</div><div class="sub" data-live="ccDate">${fmtDate(d)}</div></div>
+      <div class="sub bat">${BAT ? batSvg(BAT.level) + Math.round(BAT.level * 100) + '%' : ''}</div></div>
+    ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
+    ${sliderHTML('imm', 'Immersion', 'env', P.imm)}
+    <div class="tiles">
+      ${tile('dnd', 'Do Not<br>Disturb', 'moon', P.dnd)}${tile('reduce', 'Reduce<br>Motion', 'motion', P.reduce)}${tile('recenter', 'Recenter', 'recenter')}
+      ${tile('envs', 'Environ&shy;ments', 'env')}${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
+    </div></div>`;
+}
+
+/* ---------- apps ---------- */
+let ORIGIN = null, BAT = null;
+const W = { loading:false, err:'' };              // weather
+const C = { on:false, heading:null, beta:0, gamma:0, abs:false, err:'' }; // compass
+const M = { start:0, dur:60000 };                 // mindfulness
+const K = { cur:'0', acc:null, op:null, fresh:true, expr:'' }; // calculator
+let D = { name:'', city:1 };                      // add person draft
+const swElapsed = () => P.sw.acc + (P.sw.start ? now() - P.sw.start : 0);
+const timerLeft = () => P.timer.end ? P.timer.end - now() : P.timer.left != null ? P.timer.left : P.timer.dur;
+
+const VIEWS = {
+  clock(){
+    const d = new Date();
+    return `<div class="eyebrow">Clock</div>
+      <div class="bigtime" data-live="clockBig">${fmtTime(d)}</div><div class="sub" data-live="clockDate">${fmtDate(d)}</div>
+      <div class="wc">${WORLD.map(([c, tz]) => `<div class="wcard"><span class="sub">${c}</span><b data-live-tz="${tz}">${fmtTime(d, tz)}</b><small>${tzDiff(tz)}</small></div>`).join('')}</div>
+      <div class="row2" style="margin-top:auto"><button class="btn" data-k="go-timer" data-act="app" data-v="timer" data-default>${svg('timer')}Timer</button>
+      <button class="btn" data-k="go-sw" data-act="app" data-v="stopwatch">${svg('stopwatch')}Stopwatch</button></div>`;
+  },
+  timer(){
+    const run = !!P.timer.end, paused = !run && P.timer.left != null, left = timerLeft();
+    const C2 = 2 * Math.PI * 96, frac = clamp(left / P.timer.dur, 0, 1);
+    const presets = [1,3,5,10,15].map(m => `<button class="btn ${P.timer.dur === m * 60000 && !run && !paused ? 'on' : ''}" data-k="pre-${m}" data-act="timerSet" data-v="${m}">${m} min</button>`).join('');
+    return `<div class="eyebrow">Timer</div>
+      <div class="ring"><svg viewBox="0 0 220 220"><circle cx="110" cy="110" r="96" stroke="rgba(255,255,255,.14)" stroke-width="12" fill="none"/>
+        <circle data-live="timerArc" cx="110" cy="110" r="96" stroke="#ff9f0a" stroke-width="12" fill="none" stroke-linecap="round"
+          stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${(C2 * (1 - frac)).toFixed(1)}"/></svg>
+        <div class="rt"><div><span data-live="timerLeft">${fmtDur(left)}</span><small>${run ? 'Running' : paused ? 'Paused' : 'of ' + fmtDur(P.timer.dur)}</small></div></div></div>
+      ${run || paused ? '' : `<div class="presets">${presets}</div>
+        <button class="spin" data-k="spin-timer" data-spin="timer"><span class="ar">◀</span>${fmtDur(P.timer.dur)}<span class="ar">▶</span></button>`}
+      <div class="row2" style="margin-top:auto"><button class="btn primary" data-k="timerGo" data-act="timerGo" data-default>${run ? 'Pause' : paused ? 'Resume' : 'Start'}</button>
+        <button class="btn" data-k="timerReset" data-act="timerReset">Reset</button></div>`;
+  },
+  stopwatch(){
+    const run = !!P.sw.start, laps = P.sw.laps;
+    return `<div class="eyebrow">Stopwatch</div>
+      <div class="swtime" data-live="sw">${fmtDur(swElapsed(), true)}</div>
+      <div class="list">${laps.length ? laps.slice().reverse().map((l, i) => `<div class="lrow"><b>Lap ${laps.length - i}</b><span class="r">${fmtDur(l - (laps[laps.length - i - 2] || 0), true)} · ${fmtDur(l, true)}</span></div>`).join('')
+        : '<div class="center dim">Laps appear here</div>'}</div>
+      <div class="row2"><button class="btn primary" data-k="swGo" data-act="swGo" data-default>${run ? 'Stop' : swElapsed() ? 'Resume' : 'Start'}</button>
+        <button class="btn" data-k="swLap" data-act="swLap">${run ? 'Lap' : 'Reset'}</button></div>`;
+  },
+  mind(arg){
+    if(arg === 'run'){
+      const el = now() - M.start;
+      return `<div class="eyebrow">Mindfulness</div>
+        <div class="center"><div class="flower" style="animation-delay:-${el % 10000}ms">${Array.from({length:6}, (_, i) => `<i style="transform:rotate(${i * 60}deg) translateX(52px)"></i>`).join('')}</div>
+        <div class="title" data-live="mindPhase">${(el % 10000) < 4000 ? 'Breathe in' : 'Breathe out'}</div>
+        <div class="sub" data-live="mindLeft">${fmtDur(M.dur - el)} left</div></div>
+        <button class="btn" data-k="mindEnd" data-act="mindEnd" data-default>End session</button>`;
+    }
+    if(arg === 'done') return `<div class="eyebrow">Mindfulness</div><div class="center">${discHTML('#8af7e6','#14b0a3','#fff',svg('mind'))}
+        <div class="title">Well done</div><div class="sub">${Math.round(M.dur / 60000)} minute${M.dur > 60000 ? 's' : ''} of mindful breathing.</div></div>
+        <button class="btn primary" data-k="mindAgain" data-act="mindStart" data-v="${M.dur / 60000}" data-default>Again</button>`;
+    return `<div class="eyebrow">Mindfulness</div>
+      <div class="center"><div class="title">Breathe</div><div class="sub" style="max-width:380px">Follow the flower: breathe in as it opens, out as it closes. Find a still spot first.</div></div>
+      <div class="row2">${[1,3,5].map((m, i) => `<button class="btn ${i ? '' : 'primary'}" data-k="mind-${m}" data-act="mindStart" data-v="${m}" ${i ? '' : 'data-default'}>${m} min</button>`).join('')}</div>`;
+  },
+  compass(){
+    if(!C.on) return `<div class="eyebrow">Compass</div><div class="center">${discHTML('#b1afff','#5856d6','#fff',svg('compass'))}
+        <div class="title">Head compass</div><div class="sub" style="max-width:400px">Uses the glasses' motion sensors, so it points where you look.${C.err ? `<br><span style="color:#ff8a84">${h(C.err)}</span>` : ''}</div></div>
+        <button class="btn primary" data-k="compassOn" data-act="compassOn" data-default>Start compass</button>`;
+    const hd = C.heading == null ? null : Math.round(C.heading);
+    const ticks = Array.from({length:72}, (_, i) => { const a = i * 5 * Math.PI / 180, r1 = i % 6 ? 104 : 96;
+      return `<line x1="${115 + r1 * Math.sin(a)}" y1="${115 - r1 * Math.cos(a)}" x2="${115 + 110 * Math.sin(a)}" y2="${115 - 110 * Math.cos(a)}" stroke="rgba(255,255,255,${i % 6 ? .35 : .8})" stroke-width="${i % 18 ? 1.5 : 3}"/>`; }).join('');
+    const card = [['N',0],['E',90],['S',180],['W',270]].map(([l, d]) => { const a = d * Math.PI / 180;
+      return `<text x="${115 + 76 * Math.sin(a)}" y="${115 - 76 * Math.cos(a) + 9}" text-anchor="middle" font-size="26" font-weight="700" fill="${l === 'N' ? '#ff6b5e' : '#fff'}" transform="rotate(${d} ${115 + 76 * Math.sin(a)} ${115 - 76 * Math.cos(a)})">${l}</text>`; }).join('');
+    return `<div class="eyebrow">Compass</div>
+      <div class="dial"><span class="needle"></span><svg data-live="dial" viewBox="0 0 230 230" style="rotate:${-(hd || 0)}deg">${ticks}${card}</svg></div>
+      <div class="center" style="gap:2px"><div class="title" data-live="heading">${hd == null ? 'Waiting for sensor…' : hd + '° ' + cardinal(hd)}</div>
+        <div class="sub" data-live="level">${levelText()}</div></div>`;
+  },
+  notes(arg){
+    if(arg && arg.id){
+      const n = P.notes.find(x => x.id === arg.id); if(!n) return '';
+      return `<div class="eyebrow">Note</div>
+        <textarea data-k="ta" data-note="${n.id}" data-default placeholder="Pinch to dictate or type…" aria-label="Note text">${h(n.text)}</textarea>
+        <div class="row2"><button class="btn" data-k="noteSpeak" data-act="noteSpeak" data-v="${n.id}">${svg('speak')}Read</button>
+        <button class="btn danger" data-k="noteDel" data-act="noteDel" data-v="${n.id}">${svg('trash')}${confirmKey === 'del' ? 'Sure?' : 'Delete'}</button>
+        <button class="btn primary" data-k="noteDone" data-act="close">Done</button></div>`;
+    }
+    P.notes = P.notes.filter(n => n.text.trim());
+    return `<div class="eyebrow">Notes</div><div class="title">${P.notes.length} note${P.notes.length === 1 ? '' : 's'}</div>
+      <div class="list"><button class="lrow" data-k="noteNew" data-act="noteNew" data-default style="color:var(--accent)"><b>+ New note</b></button>
+      ${P.notes.map(n => `<button class="lrow" data-k="note-${n.id}" data-act="noteOpen" data-v="${n.id}"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h(n.text.split('\n')[0])}</b><span class="r">${new Date(n.at).toLocaleDateString([], { month:'short', day:'numeric' })}</span></button>`).join('')}</div>`;
+  },
+  calc(){
+    const rows = [['C','±','%','÷'],['7','8','9','×'],['4','5','6','−'],['1','2','3','+'],['0','.','⌫','=']];
+    const len = K.cur.length, fs = len > 10 ? 2.2 : len > 7 ? 2.9 : 3.6;
+    return `<div class="calc-d"><small>${h(K.expr)}</small><span style="font-size:${fs}rem">${h(K.cur)}</span></div>
+      <div class="keys">${rows.flat().map(k => `<button data-k="key-${k}" data-act="calc" data-v="${k}" class="${'÷×−+='.includes(k) ? 'op' : 'C±%⌫'.includes(k) ? 'fn' : ''} ${K.op === k && K.fresh ? 'on' : ''}" ${k === '5' ? 'data-default' : ''}>${k}</button>`).join('')}</div>`;
+  },
+  weather(){
+    const wx = P.wx;
+    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="title">Finding you…</div><div class="sub">Location comes from your paired phone.</div></div>`;
+    if(!wx) return `<div class="eyebrow">Weather</div><div class="center">${discHTML('#8fd0ff','#2f7bff','#fff',svg('weather'))}
+        <div class="title">Local weather</div><div class="sub" style="max-width:400px">Uses your phone's location and the free Open-Meteo forecast.${W.err ? `<br><span style="color:#ff8a84">${h(W.err)}</span>` : ''}</div></div>
+        <button class="btn primary" data-k="wxLoc" data-act="wxLoc" data-default>${svg('loc')}Use my location</button>`;
+    const c = wx.data.current, dl = wx.data.daily, u = '°';
+    const days = dl.time.slice(0, 5).map((t, i) => `<div><span class="dim">${i ? new Date(t + 'T12:00').toLocaleDateString([], { weekday:'short' }) : 'Today'}</span><b>${Math.round(dl.temperature_2m_max[i])}${u}</b><span class="dim">${Math.round(dl.temperature_2m_min[i])}${u}</span></div>`).join('');
+    return `<div class="eyebrow">Weather · ${wxAge(wx.at)}</div>
+      <div class="wx-now"><div class="t">${Math.round(c.temperature_2m)}°</div><div><div class="title" style="font-size:1.5rem">${wxText(c.weather_code)}</div>
+        <div class="sub">Feels ${Math.round(c.apparent_temperature)}° · H ${Math.round(dl.temperature_2m_max[0])}° L ${Math.round(dl.temperature_2m_min[0])}°</div>
+        <div class="sub">Wind ${Math.round(c.wind_speed_10m)} mph · Humidity ${Math.round(c.relative_humidity_2m)}%</div></div></div>
+      <div class="wx-days">${days}</div>
+      <div class="row2" style="margin-top:auto"><button class="btn" data-k="wxRefresh" data-act="wxLoc" data-default>${svg('refresh')}Refresh</button>
+        <button class="btn" data-k="wxUnits" data-act="wxUnits">°${P.units === 'F' ? 'C' : 'F'} instead</button></div>`;
+  },
+  tips(){
+    const T = [
+      ['Thumb swipe on your index finger','Move the highlight, like looking at something'],
+      ['Index pinch','Select what is highlighted, like a Vision Pro tap'],
+      ['Middle pinch','Back: close the window or panel'],
+      ['Swipe up at the top','Highlight the chevron, then pinch to open Control Center'],
+      ['Swipe left from the icons','Reach the tab bar: Apps, People, Environments'],
+      ['Pinch the window bar','Move mode: swipe to reposition, pinch again to drop'],
+      ['Pinch and drag','Fine control on sliders and while moving a window'],
+      ['Environments','Pick one, then set Immersion to choose how strong it is'],
+      ['Black is clear','The lens adds light, so dark areas are see-through'],
+    ];
+    return `<div class="eyebrow">Tips</div><div class="title">Getting around</div>
+      <div class="list">${T.map(([a, b], i) => `<div class="lrow" tabindex="0" data-k="tip-${i}" ${i ? '' : 'data-default'} style="flex-direction:column;align-items:flex-start;gap:2px"><b>${a}</b><span class="sub" style="font-size:.95rem">${b}</span></div>`).join('')}</div>`;
+  },
+  settings(){
+    const acc = ACCENTS.find(a => a[1] === P.accent) || ACCENTS[0], ts = TEXT.find(t => t[1] === P.ts) || TEXT[1];
+    return `<div class="eyebrow">Settings</div>
+      <div class="list">
+        <button class="lrow" data-k="s-accent" data-spin="accent" data-default><b>Accent color</b><span class="r" style="display:flex;gap:10px;align-items:center">◀ ${acc[0]} <i class="sw" style="background:${acc[1]}"></i> ▶</span></button>
+        <button class="lrow" data-k="s-ts" data-spin="ts"><b>Text size</b><span class="r">◀ ${ts[0]} ▶</span></button>
+        ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
+        <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
+        <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
+        <button class="lrow" data-k="s-reset" data-act="resetAll"><b style="color:#ff8a84">${confirmKey === 'reset' ? 'Pinch again to erase everything' : 'Reset all data'}</b></button>
+      </div>`;
+  },
+  person(i){
+    const p = P.people[i]; if(!p) return '';
+    return `<div class="center"><span class="icon avatar-lg" style="position:static;width:auto">${discHTML(`hsl(${hue(p.name)} 85% 72%)`, `hsl(${hue(p.name)} 70% 42%)`, '#fff', `<span class="ini">${h(initials(p.name))}</span>`)}</span>
+        <div class="title">${h(p.name)}</div><div class="sub">${h(p.city)} · ${tzDiff(p.tz)}</div>
+        <div class="bigtime" style="font-size:4rem" data-live-tz="${p.tz}">${fmtTime(new Date(), p.tz)}</div>
+        <div class="sub" data-live="pDay">${new Date().toLocaleDateString([], { weekday:'long', timeZone:p.tz })}</div></div>
+      <div class="row2"><button class="btn danger" data-k="rmPerson" data-act="rmPerson" data-v="${i}">${confirmKey === 'rm' ? 'Pinch again' : 'Remove'}</button>
+        <button class="btn primary" data-k="pDone" data-act="close" data-default>Done</button></div>`;
+  },
+  addPerson(){
+    const [city, tz] = CITIES[D.city];
+    return `<div class="eyebrow">People</div><div class="title">Add someone</div>
+      <input type="text" data-k="pName" data-draft="name" value="${h(D.name)}" placeholder="Name (pinch to type)" autocomplete="off" aria-label="Name" data-default>
+      <button class="spin" data-k="pCity" data-spin="city"><span class="ar">◀</span><span>${city} <span class="dim" style="font-weight:500">${fmtTime(new Date(), tz)}</span></span><span class="ar">▶</span></button>
+      <div class="sub" style="text-align:center">Swipe left or right on the city to change it.</div>
+      <button class="btn primary" data-k="pSave" data-act="savePerson" style="margin-top:auto;flex:0 0 auto">Save</button>`;
+  },
+};
+
+/* ---------- live updates (4 Hz; the display runs at 30 Hz) ---------- */
+function tick(){
+  const d = new Date();
+  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('⏱ Timer done'); speak('Timer done'); if(V.app === 'timer') render(); }
+  if(V.app === 'mind' && V.arg === 'run' && now() - M.start >= M.dur){ history.replaceState({ app:'mind', arg:'done' }, ''); setView({ app:'mind', arg:'done' }); speak('Session complete'); }
+  set('status', statusHTML(), true);
+  set('ccTime', fmtTime(d)); set('ccDate', fmtDate(d)); set('clockBig', fmtTime(d)); set('clockDate', fmtDate(d));
+  document.querySelectorAll('[data-live-tz]').forEach(e => { const t = fmtTime(d, e.dataset.liveTz); if(e.textContent !== t) e.textContent = t; });
+  if(V.app === 'timer'){
+    const left = timerLeft(), C2 = 2 * Math.PI * 96;
+    set('timerLeft', fmtDur(left));
+    const arc = q('timerArc'); if(arc) arc.setAttribute('stroke-dashoffset', (C2 * (1 - clamp(left / P.timer.dur, 0, 1))).toFixed(1));
+  }
+  if(V.app === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
+  if(V.app === 'mind' && V.arg === 'run'){ const el = now() - M.start; set('mindPhase', (el % 10000) < 4000 ? 'Breathe in' : 'Breathe out'); set('mindLeft', fmtDur(M.dur - el) + ' left'); }
+  if(V.app === 'compass' && C.on && C.heading != null){
+    const hd = Math.round(C.heading), dial = q('dial');
+    if(dial) dial.style.rotate = -hd + 'deg';
+    set('heading', hd + '° ' + cardinal(hd) + (C.abs ? '' : ' (relative)')); set('level', levelText());
+  }
+}
+const q = k => document.querySelector(`[data-live="${k}"]`);
+function set(k, v, html){ const e = q(k); if(!e) return; if(html){ if(e.innerHTML !== v) e.innerHTML = v; } else if(e.textContent !== v) e.textContent = v; }
+setInterval(tick, 250);
+
+/* ---------- actions (pinch / Enter → click on the focused control) ---------- */
+const ACT = {
+  tab(v){ P.tab = v; save(); render(); focusKey('tab-' + v); },
+  cc(){ openCC(); },
+  app(v, b){ if(!V.app){ restore.apps = 'app-' + v; const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 44 }; }
+    open(v); },
+  close(){ back(); },
+  grab(){ moving = !moving; toast(moving ? 'Swipe to move · pinch to drop' : 'Window placed'); },
+  env(v){ P.env = v; save(); initEnv(); restore.env = 'env-' + v; toast(ENVS.find(e => e.id === v).name); },
+  person(v, b){ restore.people = 'person-' + v; setOrigin(b); open('person', +v); },
+  addPerson(v, b){ restore.people = 'person-add'; D = { name:'', city:1 }; setOrigin(b); open('addPerson'); },
+  savePerson(){
+    const name = D.name.trim(); if(!name){ toast('Add a name first'); return focusKey('pName'); }
+    const [city, tz] = CITIES[D.city]; P.people.push({ name, city, tz }); save();
+    restore.people = 'person-' + (P.people.length - 1); toast(name + ' added'); back();
+  },
+  rmPerson(v){ if(confirmKey !== 'rm'){ confirmKey = 'rm'; return; } const p = P.people.splice(+v, 1)[0]; save(); restore.people = 'person-add'; toast(p.name + ' removed'); back(); },
+  tile(v){
+    if(v === 'dnd'){ P.dnd = !P.dnd; toast(P.dnd ? 'Do Not Disturb on' : 'Do Not Disturb off'); }
+    if(v === 'reduce'){ P.reduce = !P.reduce; }
+    if(v === 'recenter'){ $('#win').style.setProperty('--wx', '0px'); $('#win').style.setProperty('--wy', '0px'); P.tab = 'apps'; restore.apps = 'app-clock'; back(); toast('Recentered'); }
+    if(v === 'envs'){ P.tab = 'env'; back(); }
+    if(v === 'settings' || v === 'tips') open(v);
+    save(); apply();
+  },
+  timerSet(v){ P.timer.dur = v * 60000; P.timer.left = null; save(); },
+  timerGo(){ const t = P.timer;
+    if(t.end){ t.left = t.end - now(); t.end = null; } else { t.end = now() + timerLeft(); t.left = null; }
+    save(); },
+  timerReset(){ P.timer.end = null; P.timer.left = null; save(); },
+  swGo(){ const s = P.sw; if(s.start){ s.acc += now() - s.start; s.start = null; } else s.start = now(); save(); },
+  swLap(){ const s = P.sw; if(s.start){ s.laps.push(swElapsed()); if(s.laps.length > 50) s.laps.shift(); } else { s.acc = 0; s.laps = []; } save(); },
+  mindStart(v){ M.start = now(); M.dur = v * 60000; sub('run'); },
+  mindEnd(){ M.dur = Math.max(60000, Math.round((now() - M.start) / 60000) * 60000); history.replaceState({ app:'mind', arg:'done' }, ''); setView({ app:'mind', arg:'done' }); },
+  compassOn(){ enableSensors(); },
+  noteNew(){ const n = { id:Math.random().toString(36).slice(2, 9), text:'', at:now() }; P.notes.unshift(n); save(); sub({ id:n.id }); },
+  noteOpen(v){ sub({ id:v }); },
+  noteSpeak(v){ const n = P.notes.find(x => x.id === v); if(n && n.text.trim()) speak(n.text, true); else toast('Nothing to read'); },
+  noteDel(v){ if(confirmKey !== 'del'){ confirmKey = 'del'; return; } P.notes = P.notes.filter(n => n.id !== v); save(); toast('Note deleted'); back(); },
+  calc(v){ calc(v); },
+  wxLoc(){ getWeather(); },
+  wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon); },
+  resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
+};
+function setOrigin(b){ const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 44 }; }
+function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e) e.focus({ preventScroll:true }); }
+
+document.addEventListener('click', e => {
+  const sl = e.target.closest('[data-slider]');
+  if(sl && e.detail > 0){ // mouse click on a track sets the value directly (desktop testing)
+    const t = sl.querySelector('.track').getBoundingClientRect();
+    if(e.clientX >= t.left - 6) { setSlider(sl.dataset.slider, (e.clientX - t.left) / t.width); }
+    return;
+  }
+  const sp = e.target.closest('[data-spin]');
+  if(sp){ spin(sp.dataset.spin, 1); return; }
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const act = b.dataset.act, before = confirmKey;
+  if(!ACT[act]) return;
+  ACT[act](b.dataset.v, b);
+  if(confirmKey === before && !['rmPerson','noteDel','resetAll'].includes(act)) confirmKey = null;
+  render();
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if(t.dataset.note){ const n = P.notes.find(x => x.id === t.dataset.note); if(n){ n.text = t.value; n.at = now(); save(); } }
+  if(t.dataset.draft) D[t.dataset.draft] = t.value;
+});
+
+/* ---------- sliders and spinners ---------- */
+const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v }, imm:{ min:0, get:() => P.imm, set:v => P.imm = v } };
+function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100, s.min, 1)); save(); apply(); render(); }
+const SPIN = {
+  timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
+  city:d => { D.city = (D.city + d + CITIES.length) % CITIES.length; },
+  accent:d => { const i = ACCENTS.findIndex(a => a[1] === P.accent); P.accent = ACCENTS[(i + d + ACCENTS.length) % ACCENTS.length][1]; },
+  ts:d => { const i = TEXT.findIndex(t => t[1] === P.ts); P.ts = TEXT[clamp(i + d, 0, TEXT.length - 1)][1]; },
+};
+function spin(k, d){ SPIN[k](d); save(); apply(); render(); }
+
+/* ---------- Neural Band / touchpad: the OS sends arrow keys + Enter; Back calls history.back() ---------- */
+const DIRS = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
+document.addEventListener('keydown', e => {
+  const a = document.activeElement, typing = a && /^(TEXTAREA|INPUT)$/.test(a.tagName);
+  if(e.key === 'Escape' || (e.key === 'Backspace' && !typing)){
+    e.preventDefault();
+    if(moving){ moving = false; render(); } else back();
+    return;
+  }
+  const d = DIRS[e.key]; if(!d) return;
+  if(typing && d[0]) return; // let the caret move on a desktop keyboard
+  e.preventDefault();
+  if(moving) return nudge(d[0] * 16, d[1] * 16);
+  if(a && a.dataset.slider && d[0]) return setSlider(a.dataset.slider, SL[a.dataset.slider].get() + d[0] * .05);
+  if(a && a.dataset.spin && d[0]) return spin(a.dataset.spin, d[0]);
+  moveFocus(d);
+});
+function nudge(dx, dy){
+  const s = winEl.style, x = parseFloat(s.getPropertyValue('--wx')) || 0, y = parseFloat(s.getPropertyValue('--wy')) || 0;
+  s.setProperty('--wx', clamp(x + dx, -30, 30) + 'px'); s.setProperty('--wy', clamp(y + dy, -22, 30) + 'px');
+}
+function moveFocus([dx, dy]){
+  const scope = V.cc ? ccEl : V.app ? winEl : homeEl, items = focusables(scope);
+  const cur = items.includes(document.activeElement) ? document.activeElement : null;
+  if(!cur){ const d = scope.querySelector('[data-default]') || items[0]; d && d.focus({ preventScroll:true }); return; }
+  const c = center(cur); let best = null, bs = Infinity;
+  for(const el of items){
+    if(el === cur) continue;
+    const p = center(el), vx = p.x - c.x, vy = p.y - c.y, along = vx * dx + vy * dy, across = Math.abs(vx * dy) + Math.abs(vy * dx);
+    if(along <= 4) continue;
+    const sc = along + across * 2.2;
+    if(sc < bs){ bs = sc; best = el; }
+  }
+  if(best){ best.focus({ preventScroll:true }); best.scrollIntoView({ block:'nearest' }); }
+}
+function center(el){ const r = (el.querySelector('.disc') || el).getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2 }; }
+
+/* pinch-and-drag (pointer events) for sliders and window moves; mouse hover = gaze on desktop */
+let drag = null;
+document.addEventListener('pointerdown', e => {
+  drag = { x:e.clientX, y:e.clientY, ax:0, ay:0, type:e.pointerType };
+  if(e.pointerType !== 'mouse') try { document.body.setPointerCapture(e.pointerId); } catch(_){}
+});
+document.addEventListener('pointermove', e => {
+  if(!drag){
+    if(e.pointerType === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
+      if(t && t !== document.activeElement && scope.contains(t)) t.focus({ preventScroll:true }); }
+    return;
+  }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  const a = document.activeElement;
+  if(moving) return nudge(dx, dy);
+  if(drag.type === 'mouse') return;
+  if(a && a.dataset.slider){ const s = SL[a.dataset.slider]; s.set(clamp(s.get() + dx / 300, s.min, 1)); apply(); updSlider(a); return; }
+  drag.ax += dx; drag.ay += dy;
+  if(Math.abs(drag.ax) > 70){ moveFocus([Math.sign(drag.ax), 0]); drag.ax = drag.ay = 0; }
+  else if(Math.abs(drag.ay) > 70){ moveFocus([0, Math.sign(drag.ay)]); drag.ax = drag.ay = 0; }
+});
+addEventListener('pointerup', () => { if(drag && document.activeElement && document.activeElement.dataset.slider) save(); drag = null; });
+addEventListener('pointercancel', () => drag = null);
+function updSlider(el){ const v = Math.round(SL[el.dataset.slider].get() * 100); el.querySelector('.track i').style.width = v + '%'; el.querySelector('.sl-v').textContent = v + '%'; }
+
+/* ---------- helpers for apps ---------- */
+function speak(text, force){
+  if((P.dnd && !force) || !('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch(e){}
+}
+function calc(k){
+  const num = s => parseFloat(s), fmt = r => !isFinite(r) ? 'Error' : String(parseFloat(r.toPrecision(12)));
+  const run = (a, op, b) => op === '+' ? a + b : op === '−' ? a - b : op === '×' ? a * b : b === 0 ? NaN : a / b;
+  if(K.cur === 'Error' && k !== 'C') { K.cur = '0'; K.fresh = true; }
+  if(/[0-9]/.test(k)){ if(K.fresh){ K.cur = k; K.fresh = false; } else if(K.cur.replace(/[-.]/g, '').length < 12) K.cur = K.cur === '0' ? k : K.cur + k; }
+  else if(k === '.'){ if(K.fresh){ K.cur = '0.'; K.fresh = false; } else if(!K.cur.includes('.')) K.cur += '.'; }
+  else if(k === 'C'){ Object.assign(K, { cur:'0', acc:null, op:null, fresh:true, expr:'' }); }
+  else if(k === '±'){ K.cur = K.cur.startsWith('-') ? K.cur.slice(1) : K.cur === '0' ? '0' : '-' + K.cur; }
+  else if(k === '%'){ K.cur = fmt(num(K.cur) / 100); }
+  else if(k === '⌫'){ if(!K.fresh){ K.cur = K.cur.length > 1 && K.cur !== '-0' ? K.cur.slice(0, -1) : '0'; if(K.cur === '-') K.cur = '0'; } }
+  else if(k === '='){ if(K.op){ K.expr = `${fmt(K.acc)} ${K.op} ${K.cur} =`; K.cur = fmt(run(K.acc, K.op, num(K.cur))); K.acc = null; K.op = null; K.fresh = true; } }
+  else { // operator
+    if(K.op && !K.fresh){ K.acc = run(K.acc, K.op, num(K.cur)); K.cur = fmt(K.acc); } else K.acc = num(K.cur);
+    K.op = k; K.fresh = true; K.expr = `${fmt(K.acc)} ${k}`;
+  }
+}
+async function enableSensors(){
+  try {
+    if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
+      const r = await DeviceOrientationEvent.requestPermission();
+      if(r !== 'granted'){ C.err = 'Motion permission was declined. Allow it from the system menu (middle tap) → Permissions.'; return render(); }
+    }
+    if(!window.DeviceOrientationEvent){ C.err = 'This device has no orientation sensor.'; return render(); }
+    const onO = e => {
+      if(e.webkitCompassHeading != null){ C.heading = e.webkitCompassHeading; C.abs = true; }
+      else if(e.alpha != null){ if(e.type === 'deviceorientationabsolute' || e.absolute){ C.abs = true; C.heading = (360 - e.alpha) % 360; } else if(!C.abs) C.heading = (360 - e.alpha) % 360; }
+      C.beta = e.beta || 0; C.gamma = e.gamma || 0;
+    };
+    addEventListener('deviceorientationabsolute', onO); addEventListener('deviceorientation', onO);
+    C.on = true; C.err = ''; render(true);
+  } catch(err){ C.err = 'Could not start sensors: ' + err.message; render(); }
+}
+const cardinal = d => ['N','NE','E','SE','S','SW','W','NW'][Math.round(d / 45) % 8];
+const levelText = () => `Tilt ${Math.round(C.beta)}° · Roll ${Math.round(C.gamma)}°`;
+function getWeather(){
+  if(!navigator.geolocation){ W.err = 'Location is not available.'; return; }
+  W.loading = true; W.err = ''; render();
+  navigator.geolocation.getCurrentPosition(p => fetchWx(p.coords.latitude, p.coords.longitude), err => {
+    W.loading = false; W.err = err.code === 1 ? 'Location permission was declined. Allow it from the system menu → Permissions.' : err.code === 3 ? 'Timed out finding your location. Try again.' : 'Location is unavailable right now.';
+    if(V.app === 'weather') render(true);
+  }, { timeout:15000, maximumAge:600000 });
+}
+async function fetchWx(lat, lon){
+  W.loading = true; if(V.app === 'weather') render(true);
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5&wind_speed_unit=mph&temperature_unit=${P.units === 'F' ? 'fahrenheit' : 'celsius'}`;
+    const r = await fetch(u); if(!r.ok) throw new Error('HTTP ' + r.status);
+    P.wx = { lat, lon, at:now(), data:await r.json() }; W.err = ''; save();
+  } catch(err){ W.err = 'Could not reach the forecast (' + err.message + ').'; }
+  W.loading = false; if(V.app === 'weather') render(true);
+}
+const wxAge = t => { const m = Math.round((now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' hr ago'; };
+function wxText(c){
+  return c === 0 ? 'Clear' : c <= 2 ? 'Partly cloudy' : c === 3 ? 'Cloudy' : c <= 48 ? 'Fog' : c <= 57 ? 'Drizzle' : c <= 67 ? 'Rain'
+    : c <= 77 ? 'Snow' : c <= 82 ? 'Showers' : c <= 86 ? 'Snow showers' : 'Thunderstorms';
+}
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
+
+/* ---------- environments: additive light, so each is a low-level "mood" layer, scaled by Immersion ---------- */
+const cv = $('#env'), g = cv.getContext('2d');
+let parts = [], shoot = null;
+function rnd(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function initEnv(){
+  const r = rnd(7); parts = [];
+  const n = { moon:140, joshua:220, yosemite:90, hood:120, haleakala:6, jupiter:0, none:0 }[P.env] || 0;
+  for(let i = 0; i < n; i++) parts.push({ x:r() * 600, y:r() * 600, s:r(), p:r() * 6.28 });
+  if(P.env === 'joshua') for(let i = 0; i < 260; i++){ const t = r(); parts.push({ x:t * 600, y:520 - t * 470 + (r() - .5) * 90 * (1 - Math.abs(t - .5)), s:r() * .4, p:r() * 6.28, mw:1 }); }
+}
+function drawEnv(t){
+  g.clearRect(0, 0, 600, 600);
+  if(P.env === 'none' || P.imm <= 0) return;
+  cv.style.opacity = (V.app || V.cc) ? .45 : 1;
+  const k = P.imm, sec = t / 1000;
+  g.save();
+  const stars = (maxY, tw) => { for(const p of parts){ if(p.y > maxY && !p.mw) continue; const a = (.35 + .65 * Math.abs(Math.sin(sec * (tw + p.s) + p.p))) * k * (p.mw ? .5 : 1);
+    g.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`; g.beginPath(); g.arc(p.x, p.y, p.mw ? .8 : .6 + p.s * 1.3, 0, 6.29); g.fill(); } };
+  if(P.env === 'moon'){
+    stars(470, .4);
+    const gr = g.createLinearGradient(0, 480, 0, 600); gr.addColorStop(0, `rgba(160,160,160,${.55 * k})`); gr.addColorStop(1, `rgba(60,60,60,${.3 * k})`);
+    g.fillStyle = gr; g.beginPath(); g.arc(300, 1500, 1020, 0, 6.29); g.fill();
+    const e = g.createRadialGradient(108, 96, 2, 118, 104, 26); e.addColorStop(0, `rgba(200,230,255,${.95 * k})`); e.addColorStop(.6, `rgba(60,130,230,${.8 * k})`); e.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = e; g.beginPath(); g.arc(118, 104, 26, 0, 6.29); g.fill();
+  } else if(P.env === 'joshua'){
+    stars(600, .8);
+    if(!shoot && Math.random() < .004) shoot = { x:80 + Math.random() * 300, y:40 + Math.random() * 120, t:sec };
+    if(shoot){ const u = (sec - shoot.t) / .7; if(u > 1) shoot = null; else {
+      const x = shoot.x + u * 220, y = shoot.y + u * 90, gr = g.createLinearGradient(x - 90, y - 37, x, y);
+      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, `rgba(255,255,255,${(1 - u) * k})`);
+      g.strokeStyle = gr; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 90, y - 37); g.lineTo(x, y); g.stroke(); } }
+    g.strokeStyle = `rgba(180,170,255,${.35 * k})`; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 560);
+    [[60,548],[130,556],[210,540],[300,552],[380,536],[470,550],[540,544],[600,552]].forEach(([x, y]) => g.lineTo(x, y)); g.stroke();
+  } else if(P.env === 'haleakala'){
+    const gr = g.createLinearGradient(0, 330, 0, 600); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, `rgba(255,110,80,${.35 * k})`); gr.addColorStop(1, `rgba(255,200,110,${.6 * k})`);
+    g.fillStyle = gr; g.fillRect(0, 330, 600, 270);
+    const s = g.createRadialGradient(300, 585, 4, 300, 585, 70); s.addColorStop(0, `rgba(255,236,190,${.9 * k})`); s.addColorStop(1, 'rgba(255,180,100,0)');
+    g.fillStyle = s; g.fillRect(200, 500, 200, 100);
+    for(const p of parts){ const x = ((p.x + sec * (6 + p.s * 8)) % 760) - 80, y = 470 + p.s * 70;
+      g.fillStyle = `rgba(255,215,200,${.22 * k})`; g.beginPath(); g.ellipse(x, y, 70 + p.s * 50, 10 + p.s * 6, 0, 0, 6.29); g.fill(); }
+  } else if(P.env === 'yosemite' || P.env === 'hood'){
+    g.strokeStyle = `rgba(255,255,255,${.4 * k})`; g.lineWidth = 2; g.beginPath();
+    const ridge = P.env === 'yosemite' ? [[0,500],[90,470],[150,380],[210,360],[240,372],[250,470],[330,455],[420,420],[470,330],[540,320],[600,410]]
+      : [[0,540],[120,520],[230,420],[300,300],[370,420],[480,515],[600,535]];
+    g.moveTo(...ridge[0]); ridge.slice(1).forEach(p => g.lineTo(...p)); g.stroke();
+    if(P.env === 'hood'){ g.fillStyle = `rgba(255,255,255,${.22 * k})`; g.beginPath(); g.moveTo(300, 300); g.lineTo(255, 365); g.lineTo(280, 352); g.lineTo(300, 368); g.lineTo(322, 350); g.lineTo(345, 365); g.closePath(); g.fill(); }
+    for(const p of parts){
+      if(P.env === 'yosemite'){ const y = (p.y + sec * (18 + p.s * 22)) % 620 - 10, x = p.x + Math.sin(sec * .8 + p.p) * 14;
+        g.fillStyle = `rgba(255,255,255,${(.35 + .5 * p.s) * k})`; g.beginPath(); g.arc(x, y, 1 + p.s * 2, 0, 6.29); g.fill(); }
+      else { const y = (p.y + sec * (420 + p.s * 200)) % 640 - 20, x = (p.x - (y - p.y) * .12 + 600) % 600;
+        g.strokeStyle = `rgba(170,205,255,${(.25 + .3 * p.s) * k})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y + 16); g.stroke(); }
+    }
+  } else if(P.env === 'jupiter'){
+    g.beginPath(); g.arc(300, 1010, 560, 0, 6.29); g.clip();
+    const cols = ['226,189,147','168,113,79','243,225,198','190,140,100','235,210,175'];
+    for(let i = 0; i < 18; i++){ const y = 450 + i * 14 + Math.sin(sec * .3 + i) * 1.5;
+      g.fillStyle = `rgba(${cols[i % 5]},${.55 * k})`; g.fillRect(0, y, 600, 15); }
+    const sx = 380 + Math.sin(sec * .05) * 30;
+    g.fillStyle = `rgba(200,90,60,${.75 * k})`; g.beginPath(); g.ellipse(sx, 530, 34, 15, 0, 0, 6.29); g.fill();
+    const sh = g.createLinearGradient(0, 0, 600, 0); sh.addColorStop(0, 'rgba(0,0,0,.85)'); sh.addColorStop(.4, 'rgba(0,0,0,0)');
+    g.fillStyle = sh; g.fillRect(0, 440, 600, 160);
+  }
+  g.restore();
+}
+setInterval(() => { if(P.env !== 'none' && !P.reduce) drawEnv(performance.now()); }, 50);
+
+/* ---------- boot ---------- */
+function apply(){
+  const r = document.documentElement.style;
+  r.setProperty('--accent', P.accent); r.setProperty('--ts', P.ts); r.setProperty('--bright', P.bright);
+  document.body.classList.toggle('reduce', P.reduce);
+  drawEnv(performance.now());
+}
+if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
+apply(); initEnv();
+history.replaceState({}, '');
+render(true);
+</script>
+</body>
+</html>
