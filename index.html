@@ -291,14 +291,15 @@ const svg = (k, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}" fill="none
 function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="2" y="7" width="21" height="10" rx="3"/><path d="M25.5 10.5v3" stroke-linecap="round"/><rect x="4" y="9" width="${Math.max(1.5, 17 * p).toFixed(1)}" height="6" rx="1.5" fill="currentColor" stroke="none"/></svg>`; }
 
 /* ---------- catalog ---------- */
+// icon gradients use the SiteVue palette: navy, electric indigo, violet-blue, periwinkle, white
 const APPS = [
-  { id:'clock', name:'Clock', bg:['#ffffff','#b9b9c0'], ink:'#111' },
-  { id:'weather', name:'Weather', bg:['#8fd0ff','#2f7bff'] },
-  { id:'compass', name:'Compass', bg:['#b1afff','#5856d6'] },
-  { id:'notes', name:'Notes', bg:['#fff48a','#ffcc00'], ink:'#2a2200' },
-  { id:'calc', name:'Calculator', bg:['#c2c2c7','#5c5c61'] },
-  { id:'tips', name:'Tips', bg:['#ecb8ff','#af52de'] },
-  { id:'settings', name:'Settings', bg:['#e0e0e5','#8e8e93'], ink:'#1c1c1e' },
+  { id:'clock', name:'Clock', bg:['#ffffff','#a9b8ff'], ink:'#1605a0' },
+  { id:'weather', name:'Weather', bg:['#b3c2ff','#6f8cf8'] },
+  { id:'compass', name:'Compass', bg:['#8a8fff','#4c52f9'] },
+  { id:'notes', name:'Notes', bg:['#6f62ff','#2a07f6'] },
+  { id:'calc', name:'Calculator', bg:['#434a9c','#11142b'] },
+  { id:'tips', name:'Tips', bg:['#5446e0','#170f63'] },
+  { id:'settings', name:'Settings', bg:['#d4dbff','#4c52f9'] },
 ];
 const CITIES = [
   ['New York','America/New_York'],['Chicago','America/Chicago'],['Denver','America/Denver'],['Phoenix','America/Phoenix'],
