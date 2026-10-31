@@ -6,7 +6,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons in a honeycomb | The same 3-4-3 honeycomb of circular icons. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons in a honeycomb | The same honeycomb (3-2-3 for the 8 apps) of circular icons. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left: Apps / People / Environments | Same. The label expands out of the bar when a tab is highlighted. |
@@ -19,7 +19,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 ## Apps
 
-Clock (world clocks) · Weather (location from your phone + Open-Meteo, °F/°C) · Timer (it keeps running in the status pill and announces "Timer done" aloud) · Stopwatch with laps · Mindfulness (breathing flower: 4 s in, 6 s out) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (accent color, text size, brightness, reduce motion, Do Not Disturb, reset).
+Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Mindfulness (breathing flower: 4 s in, 6 s out) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (accent color, text size, brightness, reduce motion, Do Not Disturb, reset).
 
 Settings, people, notes, the timer and the stopwatch are saved in the glasses' local storage.
 

@@ -134,18 +134,22 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;flex:1}
 
 /* app specifics */
-.bigtime{font-size:5.4rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+.bigtime{font-size:4.8rem;font-weight:600;letter-spacing:-.03em;line-height:1}
 .wc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .wcard{padding:12px 18px;border-radius:22px;background:var(--glass-b)}
 .wcard b{display:block;font-size:1.7rem;font-weight:600}
 .wcard small{color:var(--ink-3);font-size:.9rem}
-.ring{position:relative;width:220px;height:220px;margin:0 auto}
-.ring svg{width:220px;height:220px;rotate:-90deg}
-.ring .rt{position:absolute;inset:0;display:grid;place-items:center;font-size:3.2rem;font-weight:600;letter-spacing:-.02em}
+.ring{position:relative;width:150px;height:150px;margin:0 auto;flex:0 0 auto}
+.ring svg{width:150px;height:150px;rotate:-90deg}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;font-size:2.3rem;font-weight:600;letter-spacing:-.02em}
 .ring .rt small{display:block;font-size:.95rem;font-weight:500;color:var(--ink-2);text-align:center;letter-spacing:0}
 .presets{display:flex;gap:8px}
 .presets .btn{min-height:52px;padding:0 10px;font-size:1rem}
 .presets .btn.on{background:#fff;color:#000}
+.seg{display:flex;gap:6px;padding:5px;border-radius:30px;background:var(--glass-b);align-self:center;flex:0 0 auto}
+.seg button{height:48px;padding:0 18px;border-radius:24px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:1.02rem;color:var(--ink-2)}
+.seg button svg{width:20px;height:20px}
+.seg button.sel{background:rgba(255,255,255,.22);color:#fff}
 .swtime{font-size:4.6rem;font-weight:600;letter-spacing:-.03em;text-align:center;line-height:1.1}
 .calc-d{text-align:right;font-weight:500;line-height:1;padding:6px 8px 4px;min-height:70px;white-space:nowrap;overflow:hidden}
 .calc-d small{display:block;font-size:1rem;color:var(--ink-3);min-height:20px}
@@ -266,8 +270,6 @@ function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="current
 const APPS = [
   { id:'clock', name:'Clock', bg:['#ffffff','#b9b9c0'], ink:'#111' },
   { id:'weather', name:'Weather', bg:['#8fd0ff','#2f7bff'] },
-  { id:'timer', name:'Timer', bg:['#ffd466','#ff9500'] },
-  { id:'stopwatch', name:'Stopwatch', bg:['#ff9a8c','#ff3b30'] },
   { id:'mind', name:'Mindfulness', bg:['#8af7e6','#14b0a3'] },
   { id:'compass', name:'Compass', bg:['#b1afff','#5856d6'] },
   { id:'notes', name:'Notes', bg:['#fff48a','#ffcc00'], ink:'#2a2200' },
@@ -360,7 +362,8 @@ function discHTML(c1, c2, ink, inner, bgStyle){
   return `<span class="disc" style="--c1:${c1};--c2:${c2};color:${ink || '#fff'}"><span class="bg"${bgStyle ? ` style="background:${bgStyle}"` : ''}></span><span class="fg">${inner}</span></span>`;
 }
 /* honeycomb: rows of 3-4-3, centered on the area right of the tab bar */
-function honey(n, rows = [3,4,3], y0 = 120, dy = 134){
+function honey(n, rows, y0 = 120, dy = 134){
+  rows = rows || (n === 8 ? [3,2,3] : [3,4,3]);
   const out = []; let r = 0;
   while(out.length < n && r < rows.length){
     const cnt = rows[r];
@@ -447,20 +450,23 @@ const swElapsed = () => P.sw.acc + (P.sw.start ? now() - P.sw.start : 0);
 const timerLeft = () => P.timer.end ? P.timer.end - now() : P.timer.left != null ? P.timer.left : P.timer.dur;
 
 const VIEWS = {
-  clock(){
+  clock(tab){
+    const seg = [['world','World','clock'],['timer','Timer','timer'],['stopwatch','Stopwatch','stopwatch']].map(([id, l, ic]) =>
+      `<button class="${(tab || 'world') === id ? 'sel' : ''}" data-k="ct-${id}" data-act="clockTab" data-v="${id}" ${tab || id !== 'world' ? '' : 'data-default'}>${svg(ic)}${l}</button>`).join('');
+    const head = `<div class="seg">${seg}</div>`;
+    if(tab === 'timer') return head + timerHTML();
+    if(tab === 'stopwatch') return head + stopwatchHTML();
     const d = new Date();
-    return `<div class="eyebrow">Clock</div>
+    return `${head}
       <div class="bigtime" data-live="clockBig">${fmtTime(d)}</div><div class="sub" data-live="clockDate">${fmtDate(d)}</div>
-      <div class="wc">${WORLD.map(([c, tz]) => `<div class="wcard"><span class="sub">${c}</span><b data-live-tz="${tz}">${fmtTime(d, tz)}</b><small>${tzDiff(tz)}</small></div>`).join('')}</div>
-      <div class="row2" style="margin-top:auto"><button class="btn" data-k="go-timer" data-act="app" data-v="timer" data-default>${svg('timer')}Timer</button>
-      <button class="btn" data-k="go-sw" data-act="app" data-v="stopwatch">${svg('stopwatch')}Stopwatch</button></div>`;
+      <div class="wc">${WORLD.map(([c, tz]) => `<div class="wcard"><span class="sub">${c}</span><b data-live-tz="${tz}">${fmtTime(d, tz)}</b><small>${tzDiff(tz)}</small></div>`).join('')}</div>`;
   },
-  timer(){
+};
+function timerHTML(){
     const run = !!P.timer.end, paused = !run && P.timer.left != null, left = timerLeft();
     const C2 = 2 * Math.PI * 96, frac = clamp(left / P.timer.dur, 0, 1);
     const presets = [1,3,5,10,15].map(m => `<button class="btn ${P.timer.dur === m * 60000 && !run && !paused ? 'on' : ''}" data-k="pre-${m}" data-act="timerSet" data-v="${m}">${m} min</button>`).join('');
-    return `<div class="eyebrow">Timer</div>
-      <div class="ring"><svg viewBox="0 0 220 220"><circle cx="110" cy="110" r="96" stroke="rgba(255,255,255,.14)" stroke-width="12" fill="none"/>
+    return `<div class="ring"><svg viewBox="0 0 220 220"><circle cx="110" cy="110" r="96" stroke="rgba(255,255,255,.14)" stroke-width="12" fill="none"/>
         <circle data-live="timerArc" cx="110" cy="110" r="96" stroke="#ff9f0a" stroke-width="12" fill="none" stroke-linecap="round"
           stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${(C2 * (1 - frac)).toFixed(1)}"/></svg>
         <div class="rt"><div><span data-live="timerLeft">${fmtDur(left)}</span><small>${run ? 'Running' : paused ? 'Paused' : 'of ' + fmtDur(P.timer.dur)}</small></div></div></div>
@@ -468,16 +474,16 @@ const VIEWS = {
         <button class="spin" data-k="spin-timer" data-spin="timer"><span class="ar">◀</span>${fmtDur(P.timer.dur)}<span class="ar">▶</span></button>`}
       <div class="row2" style="margin-top:auto"><button class="btn primary" data-k="timerGo" data-act="timerGo" data-default>${run ? 'Pause' : paused ? 'Resume' : 'Start'}</button>
         <button class="btn" data-k="timerReset" data-act="timerReset">Reset</button></div>`;
-  },
-  stopwatch(){
+}
+function stopwatchHTML(){
     const run = !!P.sw.start, laps = P.sw.laps;
-    return `<div class="eyebrow">Stopwatch</div>
-      <div class="swtime" data-live="sw">${fmtDur(swElapsed(), true)}</div>
+    return `<div class="swtime" data-live="sw">${fmtDur(swElapsed(), true)}</div>
       <div class="list">${laps.length ? laps.slice().reverse().map((l, i) => `<div class="lrow"><b>Lap ${laps.length - i}</b><span class="r">${fmtDur(l - (laps[laps.length - i - 2] || 0), true)} · ${fmtDur(l, true)}</span></div>`).join('')
         : '<div class="center dim">Laps appear here</div>'}</div>
       <div class="row2"><button class="btn primary" data-k="swGo" data-act="swGo" data-default>${run ? 'Stop' : swElapsed() ? 'Resume' : 'Start'}</button>
         <button class="btn" data-k="swLap" data-act="swLap">${run ? 'Lap' : 'Reset'}</button></div>`;
-  },
+  }
+Object.assign(VIEWS, {
   mind(arg){
     if(arg === 'run'){
       const el = now() - M.start;
@@ -588,22 +594,22 @@ const VIEWS = {
       <div class="sub" style="text-align:center">Swipe left or right on the city to change it.</div>
       <button class="btn primary" data-k="pSave" data-act="savePerson" style="margin-top:auto;flex:0 0 auto">Save</button>`;
   },
-};
+});
 
 /* ---------- live updates (4 Hz; the display runs at 30 Hz) ---------- */
 function tick(){
   const d = new Date();
-  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('⏱ Timer done'); speak('Timer done'); if(V.app === 'timer') render(); }
+  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('⏱ Timer done'); speak('Timer done'); if(V.app === 'clock' && V.arg === 'timer') render(); }
   if(V.app === 'mind' && V.arg === 'run' && now() - M.start >= M.dur){ history.replaceState({ app:'mind', arg:'done' }, ''); setView({ app:'mind', arg:'done' }); speak('Session complete'); }
   set('status', statusHTML(), true);
   set('ccTime', fmtTime(d)); set('ccDate', fmtDate(d)); set('clockBig', fmtTime(d)); set('clockDate', fmtDate(d));
   document.querySelectorAll('[data-live-tz]').forEach(e => { const t = fmtTime(d, e.dataset.liveTz); if(e.textContent !== t) e.textContent = t; });
-  if(V.app === 'timer'){
+  if(V.app === 'clock' && V.arg === 'timer'){
     const left = timerLeft(), C2 = 2 * Math.PI * 96;
     set('timerLeft', fmtDur(left));
     const arc = q('timerArc'); if(arc) arc.setAttribute('stroke-dashoffset', (C2 * (1 - clamp(left / P.timer.dur, 0, 1))).toFixed(1));
   }
-  if(V.app === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
+  if(V.app === 'clock' && V.arg === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
   if(V.app === 'mind' && V.arg === 'run'){ const el = now() - M.start; set('mindPhase', (el % 10000) < 4000 ? 'Breathe in' : 'Breathe out'); set('mindLeft', fmtDur(M.dur - el) + ' left'); }
   if(V.app === 'compass' && C.on && C.heading != null){
     const hd = Math.round(C.heading), dial = q('dial');
@@ -640,6 +646,7 @@ const ACT = {
     if(v === 'settings' || v === 'tips') open(v);
     save(); apply();
   },
+  clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; history.replaceState(st, ''); V = st; },
   timerSet(v){ P.timer.dur = v * 60000; P.timer.left = null; save(); },
   timerGo(){ const t = P.timer;
     if(t.end){ t.left = t.end - now(); t.end = null; } else { t.end = now() + timerLeft(); t.left = null; }
@@ -723,14 +730,16 @@ function moveFocus([dx, dy]){
   const c = center(cur); let best = null, bs = Infinity;
   for(const el of items){
     if(el === cur) continue;
-    const p = center(el), vx = p.x - c.x, vy = p.y - c.y, along = vx * dx + vy * dy, across = Math.abs(vx * dy) + Math.abs(vy * dx);
-    if(along <= 4) continue;
+    const p = center(el), along = (p.x - c.x) * dx + (p.y - c.y) * dy;
+    // sideways distance to the target's edge, so wide rows count as "straight ahead"
+    const across = dx ? Math.max(0, p.r.top - c.y, c.y - p.r.bottom) : Math.max(0, p.r.left - c.x, c.x - p.r.right);
+    if(along <= 4 || across > along * 1.5) continue; // stay within a cone in the swipe direction
     const sc = along + across * 2.2;
     if(sc < bs){ bs = sc; best = el; }
   }
   if(best){ best.focus({ preventScroll:true }); best.scrollIntoView({ block:'nearest' }); }
 }
-function center(el){ const r = (el.querySelector('.disc') || el).getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2 }; }
+function center(el){ const r = (el.querySelector('.disc') || el).getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2, r }; }
 
 /* pinch-and-drag (pointer events) for sliders and window moves; mouse hover = gaze on desktop */
 let drag = null;
