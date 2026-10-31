@@ -153,10 +153,6 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .keys .op{background:rgba(255,159,10,.85);color:#000}
 .keys .op.on{background:#fff}
 .keys .fn{background:rgba(255,255,255,.3)}
-.flower{position:relative;width:240px;height:240px;margin:6px auto;animation:breathe 10s var(--ease) infinite}
-.flower i{position:absolute;left:65px;top:65px;width:110px;height:110px;border-radius:50%;
-  background:radial-gradient(circle at 40% 35%,rgba(150,255,240,.75),rgba(30,180,170,.35) 70%);mix-blend-mode:screen}
-@keyframes breathe{0%{scale:.32;rotate:0deg}40%{scale:1;rotate:45deg}100%{scale:.32;rotate:0deg}}
 .dial{position:relative;width:230px;height:230px;margin:0 auto}
 .dial svg{width:230px;height:230px;transition:rotate .2s linear}
 .dial .needle{position:absolute;left:50%;top:-4px;translate:-50% 0;width:0;height:0;
@@ -239,8 +235,6 @@ const G = {
   weather:'<circle cx="9" cy="8.5" r="3"/><path d="M9 2.5v1.4M3.5 8.5H2.2M4.6 4.1l1 1M13.4 4.1l-1 1"/><path d="M8 20h9a3.5 3.5 0 0 0 .4-7 4.6 4.6 0 0 0-8.9 1.2A2.9 2.9 0 0 0 8 20z"/>',
   timer:'<path d="M7 3h10M7 21h10M8 3v2.5a4 4 0 0 0 1.7 3.3L12 10.5l2.3-1.7A4 4 0 0 0 16 5.5V3M8 21v-2.5a4 4 0 0 1 1.7-3.3L12 13.5l2.3 1.7a4 4 0 0 1 1.7 3.3V21"/>',
   stopwatch:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M12 2.5V6M18.4 6.6l1.4-1.4"/>',
-  mind:Array.from({length:6}, (_, i) => { const a = i * Math.PI / 3;
-    return `<circle cx="${(12 + 4.2 * Math.cos(a)).toFixed(2)}" cy="${(12 + 4.2 * Math.sin(a)).toFixed(2)}" r="4"/>`; }).join(''),
   compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
   notes:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
   calc:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 18.5h.01M12 18.5h3.5"/>',
@@ -265,7 +259,6 @@ function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="current
 const APPS = [
   { id:'clock', name:'Clock', bg:['#ffffff','#b9b9c0'], ink:'#111' },
   { id:'weather', name:'Weather', bg:['#8fd0ff','#2f7bff'] },
-  { id:'mind', name:'Mindfulness', bg:['#8af7e6','#14b0a3'] },
   { id:'compass', name:'Compass', bg:['#b1afff','#5856d6'] },
   { id:'notes', name:'Notes', bg:['#fff48a','#ffcc00'], ink:'#2a2200' },
   { id:'calc', name:'Calculator', bg:['#c2c2c7','#5c5c61'] },
@@ -317,6 +310,7 @@ function back(){ if(V.app || V.cc) history.back(); }
 addEventListener('popstate', e => setView(e.state || {}));
 function setView(st){
   const prev = V; V = st || {};
+  if(V.app && !VIEWS[V.app]) V = {}; // e.g. a history entry for a removed app
   if(V.app && !prev.app) winAnim = true;
   if(V.cc && !prev.cc) ccAnim = true;
   if(!V.app) moving = false;
@@ -348,7 +342,7 @@ function discHTML(c1, c2, ink, inner, bgStyle){
 }
 /* honeycomb: rows of 3-4-3, centered on the area right of the tab bar */
 function honey(n, rows, y0 = 120, dy = 134){
-  rows = rows || (n === 8 ? [3,2,3] : [3,4,3]);
+  rows = rows || (n === 7 ? [2,3,2] : n === 8 ? [3,2,3] : [3,4,3]);
   const out = []; let r = 0;
   while(out.length < n && r < rows.length){
     const cnt = rows[r];
@@ -420,7 +414,6 @@ function ccHTML(){
 let ORIGIN = null, BAT = null;
 const W = { loading:false, err:'' };              // weather
 const C = { on:false, heading:null, beta:0, gamma:0, abs:false, err:'' }; // compass
-const M = { start:0, dur:60000 };                 // mindfulness
 const K = { cur:'0', acc:null, op:null, fresh:true, expr:'' }; // calculator
 let D = { name:'', city:1 };                      // add person draft
 const swElapsed = () => P.sw.acc + (P.sw.start ? now() - P.sw.start : 0);
@@ -461,22 +454,6 @@ function stopwatchHTML(){
         <button class="btn" data-k="swLap" data-act="swLap">${run ? 'Lap' : 'Reset'}</button></div>`;
   }
 Object.assign(VIEWS, {
-  mind(arg){
-    if(arg === 'run'){
-      const el = now() - M.start;
-      return `<div class="eyebrow">Mindfulness</div>
-        <div class="center"><div class="flower" style="animation-delay:-${el % 10000}ms">${Array.from({length:6}, (_, i) => `<i style="transform:rotate(${i * 60}deg) translateX(52px)"></i>`).join('')}</div>
-        <div class="title" data-live="mindPhase">${(el % 10000) < 4000 ? 'Breathe in' : 'Breathe out'}</div>
-        <div class="sub" data-live="mindLeft">${fmtDur(M.dur - el)} left</div></div>
-        <button class="btn" data-k="mindEnd" data-act="mindEnd" data-default>End session</button>`;
-    }
-    if(arg === 'done') return `<div class="eyebrow">Mindfulness</div><div class="center">${discHTML('#8af7e6','#14b0a3','#fff',svg('mind'))}
-        <div class="title">Well done</div><div class="sub">${Math.round(M.dur / 60000)} minute${M.dur > 60000 ? 's' : ''} of mindful breathing.</div></div>
-        <button class="btn primary" data-k="mindAgain" data-act="mindStart" data-v="${M.dur / 60000}" data-default>Again</button>`;
-    return `<div class="eyebrow">Mindfulness</div>
-      <div class="center"><div class="title">Breathe</div><div class="sub" style="max-width:380px">Follow the flower: breathe in as it opens, out as it closes. Find a still spot first.</div></div>
-      <div class="row2">${[1,3,5].map((m, i) => `<button class="btn ${i ? '' : 'primary'}" data-k="mind-${m}" data-act="mindStart" data-v="${m}" ${i ? '' : 'data-default'}>${m} min</button>`).join('')}</div>`;
-  },
   compass(){
     if(!C.on) return `<div class="eyebrow">Compass</div><div class="center">${discHTML('#b1afff','#5856d6','#fff',svg('compass'))}
         <div class="title">Head compass</div><div class="sub" style="max-width:400px">Uses the glasses' motion sensors, so it points where you look.${C.err ? `<br><span style="color:#ff8a84">${h(C.err)}</span>` : ''}</div></div>
@@ -576,7 +553,6 @@ Object.assign(VIEWS, {
 function tick(){
   const d = new Date();
   if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('⏱ Timer done'); speak('Timer done'); if(V.app === 'clock' && V.arg === 'timer') render(); }
-  if(V.app === 'mind' && V.arg === 'run' && now() - M.start >= M.dur){ history.replaceState({ app:'mind', arg:'done' }, ''); setView({ app:'mind', arg:'done' }); speak('Session complete'); }
   set('status', statusHTML(), true);
   set('ccTime', fmtTime(d)); set('ccDate', fmtDate(d)); set('clockBig', fmtTime(d)); set('clockDate', fmtDate(d));
   document.querySelectorAll('[data-live-tz]').forEach(e => { const t = fmtTime(d, e.dataset.liveTz); if(e.textContent !== t) e.textContent = t; });
@@ -586,7 +562,6 @@ function tick(){
     const arc = q('timerArc'); if(arc) arc.setAttribute('stroke-dashoffset', (C2 * (1 - clamp(left / P.timer.dur, 0, 1))).toFixed(1));
   }
   if(V.app === 'clock' && V.arg === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
-  if(V.app === 'mind' && V.arg === 'run'){ const el = now() - M.start; set('mindPhase', (el % 10000) < 4000 ? 'Breathe in' : 'Breathe out'); set('mindLeft', fmtDur(M.dur - el) + ' left'); }
   if(V.app === 'compass' && C.on && C.heading != null){
     const hd = Math.round(C.heading), dial = q('dial');
     if(dial) dial.style.rotate = -hd + 'deg';
@@ -628,8 +603,6 @@ const ACT = {
   timerReset(){ P.timer.end = null; P.timer.left = null; save(); },
   swGo(){ const s = P.sw; if(s.start){ s.acc += now() - s.start; s.start = null; } else s.start = now(); save(); },
   swLap(){ const s = P.sw; if(s.start){ s.laps.push(swElapsed()); if(s.laps.length > 50) s.laps.shift(); } else { s.acc = 0; s.laps = []; } save(); },
-  mindStart(v){ M.start = now(); M.dur = v * 60000; sub('run'); },
-  mindEnd(){ M.dur = Math.max(60000, Math.round((now() - M.start) / 60000) * 60000); history.replaceState({ app:'mind', arg:'done' }, ''); setView({ app:'mind', arg:'done' }); },
   compassOn(){ enableSensors(); },
   noteNew(){ const n = { id:Math.random().toString(36).slice(2, 9), text:'', at:now() }; P.notes.unshift(n); save(); sub({ id:n.id }); },
   noteOpen(v){ sub({ id:v }); },
