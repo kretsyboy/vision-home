@@ -714,16 +714,28 @@ const ACT = {
 function setOrigin(b){ const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 44 }; }
 function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e) e.focus({ preventScroll:true }); }
 
+/* The glasses' pointer rests mid-screen, right over Notes. In 'keys' mode (swipes and pinches) a pointer-made
+   click is sent to the highlighted control instead of whatever sits under the pointer. A real mouse moving on a
+   computer switches to 'mouse' mode, where clicks and hover-to-highlight follow the cursor. */
+let INPUT = matchMedia('(hover: hover) and (pointer: fine)').matches ? 'mouse' : 'keys';
+let MOUSE_AT = null;   // last cursor position, to tell a moving mouse from the glasses' resting pointer
+let PRE_FOCUS = null; // what was highlighted when the pointer went down (before the browser moves focus to it)
+document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; }, true);
+document.addEventListener('mousedown', e => { if(INPUT === 'keys') e.preventDefault(); }, true); // keep the highlight where the swipes put it
 document.addEventListener('click', e => {
-  const sl = e.target.closest('[data-slider]');
-  if(sl && e.detail > 0){ // mouse click on a track sets the value directly (desktop testing)
+  const target = INPUT === 'keys' && e.detail > 0 ? (PRE_FOCUS && PRE_FOCUS !== document.body ? PRE_FOCUS : document.activeElement) : e.target;
+  if(INPUT === 'keys' && e.detail > 0 && target && target.focus) target.focus({ preventScroll:true });
+  if(!target || !target.closest) return;
+  const sl = target.closest('[data-slider]');
+  if(sl && e.detail > 0 && INPUT === 'mouse'){ // mouse click on a track sets the value directly (desktop testing)
     const t = sl.querySelector('.track').getBoundingClientRect();
     if(e.clientX >= t.left - 6) { setSlider(sl.dataset.slider, (e.clientX - t.left) / t.width); }
     return;
   }
-  const sp = e.target.closest('[data-spin]');
+  if(sl) return; // Enter / pinch on a slider does nothing; swipe left/right adjusts it
+  const sp = target.closest('[data-spin]');
   if(sp){ spin(sp.dataset.spin, 1); return; }
-  const b = e.target.closest('[data-act]'); if(!b) return;
+  const b = target.closest('[data-act]'); if(!b) return;
   const act = b.dataset.act, before = confirmKey;
   if(!ACT[act]) return;
   ACT[act](b.dataset.v, b);
@@ -752,6 +764,7 @@ function spin(k, d){ SPIN[k](d); save(); apply(); render(); }
 const DIRS = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
 document.addEventListener('keydown', e => {
   if(e.isTrusted && (DIRS[e.key] || e.key === 'Enter')) BAND.last = now();
+  if(DIRS[e.key] || e.key === 'Enter' || e.key === 'Escape') INPUT = 'keys';
   const a = document.activeElement, typing = a && /^(TEXTAREA|INPUT)$/.test(a.tagName);
   if(e.key === 'Escape' || (e.key === 'Backspace' && !typing)){
     e.preventDefault();
@@ -797,7 +810,11 @@ document.addEventListener('pointerdown', e => {
 });
 document.addEventListener('pointermove', e => {
   if(!drag){
-    if(e.pointerType === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
+    if(e.pointerType === 'mouse' && !e.buttons){ // a real cursor that actually travels switches to mouse mode; a resting pointer never does
+      if(MOUSE_AT && Math.hypot(e.clientX - MOUSE_AT.x, e.clientY - MOUSE_AT.y) > 3) INPUT = 'mouse';
+      MOUSE_AT = { x:e.clientX, y:e.clientY };
+    }
+    if(e.pointerType === 'mouse' && INPUT === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
       if(t && t !== document.activeElement && scope.contains(t)) t.focus({ preventScroll:true }); }
     return;
   }
