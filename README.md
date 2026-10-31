@@ -1,6 +1,6 @@
 # SiteVue.AR Home: a visionOS-style menu for Meta Ray-Ban Display
 
-This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. It is a single `index.html` file (about 65 KB) with no build step, plus two PNG icons.
+This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. It is a single `index.html` file (about 59 KB) with no build step, plus two PNG icons.
 
 ## What carries over from Vision Pro, and how
 
@@ -9,13 +9,12 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 | Home View with round, layered app icons in a honeycomb | The same honeycomb (3-2-3 for the 8 apps) of circular icons. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
-| Tab bar on the left: Apps / People / Environments | Same. The label expands out of the bar when a tab is highlighted. |
-| Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Immersion, Do Not Disturb, Reduce Motion, Recenter, Environments, Settings and Tips. |
+| Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |
+| Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Do Not Disturb, Reduce Motion, Recenter, Settings and Tips. |
 | Windows on glass, with a close button and window bar below | Each app opens in a glass window that springs out of its icon. Below the window are **×** and the window bar. Pinch the bar, then swipe or pinch-and-drag to move the window, and pinch again to drop it. |
-| Environments plus the Digital Crown for immersion | Choose None, The Moon, Haleakalā, Yosemite, Mount Hood, Joshua Tree or Jupiter. Set the strength with the **Immersion** slider. |
 | People tab | The people you add, with their local time |
 
-**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge. Environments are drawn as faint light (stars, horizons, rain, snow, Jupiter's bands) over the real world, much like visionOS's mixed immersion.
+**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge.
 
 ## Apps
 
@@ -38,10 +37,7 @@ On a laptop, use the arrow keys, Enter and Esc. Mouse hover acts as gaze, and cl
 
 ## Put it on your glasses
 
-1. **Host it over HTTPS.** Meta accepts only `https://` URLs. Any static host works, for example:
-   ```bash
-   npx netlify-cli deploy --dir vision-home --prod
-   ```
+1. **Host it over HTTPS.** Meta accepts only `https://` URLs. It's live on GitHub Pages at https://kretsyboy.github.io/vision-home/ (repo `kretsyboy/vision-home`). Pushing to `main` republishes it in about a minute.
 2. **Turn on Developer Mode.** In the Meta AI app, go to Settings → App Info, tap the version number 5 times, then tap Enable.
 3. **Add the app.** In the Meta AI app, go to Apps → Web Apps → Connect Web App, paste the URL and save. "SiteVue.AR Home" then appears in the glasses' app list.
 4. Weather and Compass ask for location and motion permission the first time you use them. To change a permission later, open the system menu → Permissions.

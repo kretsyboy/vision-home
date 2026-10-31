@@ -30,7 +30,6 @@ button,textarea,input{font:inherit;color:inherit;background:none;border:0;paddin
 :focus{outline:none}
 svg{display:block}
 #stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000}
-#env{position:absolute;inset:0;transition:opacity .5s var(--ease)}
 #ui{position:absolute;inset:0;opacity:var(--bright)}
 .glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
@@ -74,11 +73,7 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .icon:focus .disc{scale:1.12;box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 30px var(--c1)}
 .icon:focus .fg{scale:1.08;translate:0 -3px}
 .icon:focus .nm{color:#fff}
-.icon .check{position:absolute;right:-2px;top:-2px;width:28px;height:28px;border-radius:50%;background:#fff;color:#000;
-  display:grid;place-items:center;z-index:1}
-.icon .check svg{width:18px;height:18px;stroke-width:3}
 .empty{position:absolute;left:110px;right:24px;top:300px;text-align:center}
-.crown{position:absolute;left:120px;width:440px;top:410px}
 .status{position:absolute;bottom:16px;left:50%;translate:-50% 0;display:flex;align-items:center;gap:14px;
   padding:9px 20px;border-radius:24px;font-size:1rem;font-weight:600;white-space:nowrap}
 .status .sep{width:4px;height:4px;border-radius:50%;background:var(--ink-3)}
@@ -186,7 +181,9 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 @keyframes ccIn{from{translate:0 -40px;opacity:0}to{translate:0 0;opacity:1}}
 .cchead{display:flex;justify-content:space-between;align-items:flex-start;padding:0 6px}
 .cctime{font-size:2.6rem;font-weight:600;letter-spacing:-.02em;line-height:1}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.tiles .tile{grid-column:span 2}
+.tiles .tile:nth-child(n+4){grid-column:span 3}
 .tile{height:92px;border-radius:26px;background:var(--glass-2);display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:7px;font-size:.88rem;font-weight:600;text-align:center;line-height:1.1}
 .tile svg{width:28px;height:28px}
@@ -211,7 +208,6 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 </head>
 <body>
 <div id="stage">
-  <canvas id="env" width="600" height="600" aria-hidden="true"></canvas>
   <div id="ui">
     <div id="home"></div>
     <div id="win" role="dialog"></div>
@@ -229,9 +225,10 @@ const now = () => Date.now();
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
-const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, env:'none', imm:.45, tab:'apps',
+const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, tab:'apps',
   people:[], notes:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
+if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
 function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
@@ -251,9 +248,7 @@ const G = {
   settings:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/>',
   apps:'<circle cx="7" cy="7" r="2.7"/><circle cx="17" cy="7" r="2.7"/><circle cx="7" cy="17" r="2.7"/><circle cx="17" cy="17" r="2.7"/>',
   people:'<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
-  env:'<path d="M2.5 19.5l6-10 4 6 2.5-3.5 6.5 7.5z"/><circle cx="17" cy="6" r="2"/>',
   chev:'<path d="M6 9.5l6 5 6-5"/>', x:'<path d="M7 7l10 10M17 7L7 17"/>', plus:'<path d="M12 5v14M5 12h14"/>',
-  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
   moon:'<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>',
   motion:'<path d="M3 12h3.5l2-5 4 10 2-5H21"/>',
@@ -276,15 +271,6 @@ const APPS = [
   { id:'calc', name:'Calculator', bg:['#c2c2c7','#5c5c61'] },
   { id:'tips', name:'Tips', bg:['#ecb8ff','#af52de'] },
   { id:'settings', name:'Settings', bg:['#e0e0e5','#8e8e93'], ink:'#1c1c1e' },
-];
-const ENVS = [
-  { id:'none', name:'None', bg:'radial-gradient(circle at 40% 30%,#5a5a60,#18181a 75%)' },
-  { id:'moon', name:'The Moon', bg:'radial-gradient(circle at 35% 28%,#f0f0f0,#7a7a7a 55%,#2b2b2b)' },
-  { id:'haleakala', name:'Haleakalā', bg:'linear-gradient(180deg,#4a3489 0%,#ff7a59 58%,#ffd27a 100%)' },
-  { id:'yosemite', name:'Yosemite', bg:'linear-gradient(180deg,#a7c9ec 0%,#eef4fb 52%,#6f8193 100%)' },
-  { id:'hood', name:'Mount Hood', bg:'linear-gradient(180deg,#5d6d7a 0%,#a8b6c0 48%,#3e4c42 100%)' },
-  { id:'joshua', name:'Joshua Tree', bg:'radial-gradient(circle at 60% 30%,#7a68e0,#1c1948 68%)' },
-  { id:'jupiter', name:'Jupiter', bg:'repeating-linear-gradient(170deg,#e2bd93 0 9px,#a8714f 9px 15px,#f3e1c6 15px 23px)' },
 ];
 const CITIES = [
   ['New York','America/New_York'],['Chicago','America/Chicago'],['Denver','America/Denver'],['Phoenix','America/Phoenix'],
@@ -349,7 +335,6 @@ function render(fresh){
   ccEl.classList.toggle('open', !!V.cc);
   ccEl.innerHTML = V.cc ? ccHTML() : '';
   winAnim = ccAnim = false;
-  drawEnv(performance.now());
   const scope = V.cc ? ccEl : V.app ? winEl : homeEl;
   const want = keep || (!V.app && !V.cc && restore[P.tab]);
   let el = want && scope.querySelector(`[data-k="${CSS.escape(want)}"]`);
@@ -375,7 +360,7 @@ function honey(n, rows, y0 = 120, dy = 134){
 const at = p => `left:${p.x - 48}px;top:${p.y - 44}px`;
 
 function homeHTML(){
-  const tabs = [['apps','Apps'],['people','People'],['env','Environments']].map(([id, l]) =>
+  const tabs = [['apps','Apps'],['people','People']].map(([id, l]) =>
     `<button class="tab ${P.tab === id ? 'sel' : ''}" data-k="tab-${id}" data-act="tab" data-v="${id}" aria-label="${l}">${svg(id)}<span class="lbl">${l}</span></button>`).join('');
   return `<button id="ccBtn" class="glass" data-k="cc" data-act="cc" aria-label="Control Center">${svg('chev')}</button>
     <nav class="tabs glass">${tabs}</nav>${gridHTML()}
@@ -391,13 +376,6 @@ function gridHTML(){
         ${discHTML('#5a5a60', '#2a2a2e', '#fff', svg('plus'))}<span class="nm">Add</span></button>` : '';
     const hint = list.length ? '' : `<div class="empty sub" style="top:${pos[0].y + 90}px">Add the people you keep in touch with to see their local time at a glance.</div>`;
     return html + add + hint;
-  }
-  if(P.tab === 'env'){
-    const pos = honey(ENVS.length, [3,4], 112, 128);
-    return ENVS.map((e, i) => `<button class="icon" style="${at(pos[i])}" data-k="env-${e.id}" data-act="env" data-v="${e.id}" ${P.env === e.id ? 'data-default' : ''} aria-label="${e.name}">
-        ${P.env === e.id ? `<span class="check">${svg('check')}</span>` : ''}${discHTML('#fff', '#888', '#fff', '', e.bg)}
-        <span class="nm">${e.name}</span></button>`).join('')
-      + `<div class="crown">${sliderHTML('imm', 'Immersion', 'env', P.imm)}</div>`;
   }
   const pos = honey(APPS.length);
   return APPS.map((a, i) => `<button class="icon" style="${at(pos[i])}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${i ? '' : 'data-default'} aria-label="${a.name}">
@@ -432,10 +410,9 @@ function ccHTML(){
     <div class="cchead"><div><div class="cctime" data-live="ccTime">${fmtTime(d)}</div><div class="sub" data-live="ccDate">${fmtDate(d)}</div></div>
       <div class="sub bat">${BAT ? batSvg(BAT.level) + Math.round(BAT.level * 100) + '%' : ''}</div></div>
     ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
-    ${sliderHTML('imm', 'Immersion', 'env', P.imm)}
     <div class="tiles">
       ${tile('dnd', 'Do Not<br>Disturb', 'moon', P.dnd)}${tile('reduce', 'Reduce<br>Motion', 'motion', P.reduce)}${tile('recenter', 'Recenter', 'recenter')}
-      ${tile('envs', 'Environ&shy;ments', 'env')}${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
+      ${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
     </div></div>`;
 }
 
@@ -556,10 +533,9 @@ Object.assign(VIEWS, {
       ['Index pinch','Select what is highlighted, like a Vision Pro tap'],
       ['Middle pinch','Back: close the window or panel'],
       ['Swipe up at the top','Highlight the chevron, then pinch to open Control Center'],
-      ['Swipe left from the icons','Reach the tab bar: Apps, People, Environments'],
+      ['Swipe left from the icons','Reach the tab bar: Apps and People'],
       ['Pinch the window bar','Move mode: swipe to reposition, pinch again to drop'],
       ['Pinch and drag','Fine control on sliders and while moving a window'],
-      ['Environments','Pick one, then set Immersion to choose how strong it is'],
       ['Black is clear','The lens adds light, so dark areas are see-through'],
     ];
     return `<div class="eyebrow">Tips</div><div class="title">Getting around</div>
@@ -629,7 +605,6 @@ const ACT = {
     open(v); },
   close(){ back(); },
   grab(){ moving = !moving; toast(moving ? 'Swipe to move · pinch to drop' : 'Window placed'); },
-  env(v){ P.env = v; save(); initEnv(); restore.env = 'env-' + v; toast(ENVS.find(e => e.id === v).name); },
   person(v, b){ restore.people = 'person-' + v; setOrigin(b); open('person', +v); },
   addPerson(v, b){ restore.people = 'person-add'; D = { name:'', city:1 }; setOrigin(b); open('addPerson'); },
   savePerson(){
@@ -642,7 +617,6 @@ const ACT = {
     if(v === 'dnd'){ P.dnd = !P.dnd; toast(P.dnd ? 'Do Not Disturb on' : 'Do Not Disturb off'); }
     if(v === 'reduce'){ P.reduce = !P.reduce; }
     if(v === 'recenter'){ $('#win').style.setProperty('--wx', '0px'); $('#win').style.setProperty('--wy', '0px'); P.tab = 'apps'; restore.apps = 'app-clock'; back(); toast('Recentered'); }
-    if(v === 'envs'){ P.tab = 'env'; back(); }
     if(v === 'settings' || v === 'tips') open(v);
     save(); apply();
   },
@@ -692,7 +666,7 @@ document.addEventListener('input', e => {
 });
 
 /* ---------- sliders and spinners ---------- */
-const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v }, imm:{ min:0, get:() => P.imm, set:v => P.imm = v } };
+const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v } };
 function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100, s.min, 1)); save(); apply(); render(); }
 const SPIN = {
   timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
@@ -830,81 +804,15 @@ function wxText(c){
 let toastT;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
 
-/* ---------- environments: additive light, so each is a low-level "mood" layer, scaled by Immersion ---------- */
-const cv = $('#env'), g = cv.getContext('2d');
-let parts = [], shoot = null;
-function rnd(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
-function initEnv(){
-  const r = rnd(7); parts = [];
-  const n = { moon:140, joshua:220, yosemite:90, hood:120, haleakala:6, jupiter:0, none:0 }[P.env] || 0;
-  for(let i = 0; i < n; i++) parts.push({ x:r() * 600, y:r() * 600, s:r(), p:r() * 6.28 });
-  if(P.env === 'joshua') for(let i = 0; i < 260; i++){ const t = r(); parts.push({ x:t * 600, y:520 - t * 470 + (r() - .5) * 90 * (1 - Math.abs(t - .5)), s:r() * .4, p:r() * 6.28, mw:1 }); }
-}
-function drawEnv(t){
-  g.clearRect(0, 0, 600, 600);
-  if(P.env === 'none' || P.imm <= 0) return;
-  cv.style.opacity = (V.app || V.cc) ? .45 : 1;
-  const k = P.imm, sec = t / 1000;
-  g.save();
-  const stars = (maxY, tw) => { for(const p of parts){ if(p.y > maxY && !p.mw) continue; const a = (.35 + .65 * Math.abs(Math.sin(sec * (tw + p.s) + p.p))) * k * (p.mw ? .5 : 1);
-    g.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`; g.beginPath(); g.arc(p.x, p.y, p.mw ? .8 : .6 + p.s * 1.3, 0, 6.29); g.fill(); } };
-  if(P.env === 'moon'){
-    stars(470, .4);
-    const gr = g.createLinearGradient(0, 480, 0, 600); gr.addColorStop(0, `rgba(160,160,160,${.55 * k})`); gr.addColorStop(1, `rgba(60,60,60,${.3 * k})`);
-    g.fillStyle = gr; g.beginPath(); g.arc(300, 1500, 1020, 0, 6.29); g.fill();
-    const e = g.createRadialGradient(108, 96, 2, 118, 104, 26); e.addColorStop(0, `rgba(200,230,255,${.95 * k})`); e.addColorStop(.6, `rgba(60,130,230,${.8 * k})`); e.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = e; g.beginPath(); g.arc(118, 104, 26, 0, 6.29); g.fill();
-  } else if(P.env === 'joshua'){
-    stars(600, .8);
-    if(!shoot && Math.random() < .004) shoot = { x:80 + Math.random() * 300, y:40 + Math.random() * 120, t:sec };
-    if(shoot){ const u = (sec - shoot.t) / .7; if(u > 1) shoot = null; else {
-      const x = shoot.x + u * 220, y = shoot.y + u * 90, gr = g.createLinearGradient(x - 90, y - 37, x, y);
-      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(1, `rgba(255,255,255,${(1 - u) * k})`);
-      g.strokeStyle = gr; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 90, y - 37); g.lineTo(x, y); g.stroke(); } }
-    g.strokeStyle = `rgba(180,170,255,${.35 * k})`; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 560);
-    [[60,548],[130,556],[210,540],[300,552],[380,536],[470,550],[540,544],[600,552]].forEach(([x, y]) => g.lineTo(x, y)); g.stroke();
-  } else if(P.env === 'haleakala'){
-    const gr = g.createLinearGradient(0, 330, 0, 600); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, `rgba(255,110,80,${.35 * k})`); gr.addColorStop(1, `rgba(255,200,110,${.6 * k})`);
-    g.fillStyle = gr; g.fillRect(0, 330, 600, 270);
-    const s = g.createRadialGradient(300, 585, 4, 300, 585, 70); s.addColorStop(0, `rgba(255,236,190,${.9 * k})`); s.addColorStop(1, 'rgba(255,180,100,0)');
-    g.fillStyle = s; g.fillRect(200, 500, 200, 100);
-    for(const p of parts){ const x = ((p.x + sec * (6 + p.s * 8)) % 760) - 80, y = 470 + p.s * 70;
-      g.fillStyle = `rgba(255,215,200,${.22 * k})`; g.beginPath(); g.ellipse(x, y, 70 + p.s * 50, 10 + p.s * 6, 0, 0, 6.29); g.fill(); }
-  } else if(P.env === 'yosemite' || P.env === 'hood'){
-    g.strokeStyle = `rgba(255,255,255,${.4 * k})`; g.lineWidth = 2; g.beginPath();
-    const ridge = P.env === 'yosemite' ? [[0,500],[90,470],[150,380],[210,360],[240,372],[250,470],[330,455],[420,420],[470,330],[540,320],[600,410]]
-      : [[0,540],[120,520],[230,420],[300,300],[370,420],[480,515],[600,535]];
-    g.moveTo(...ridge[0]); ridge.slice(1).forEach(p => g.lineTo(...p)); g.stroke();
-    if(P.env === 'hood'){ g.fillStyle = `rgba(255,255,255,${.22 * k})`; g.beginPath(); g.moveTo(300, 300); g.lineTo(255, 365); g.lineTo(280, 352); g.lineTo(300, 368); g.lineTo(322, 350); g.lineTo(345, 365); g.closePath(); g.fill(); }
-    for(const p of parts){
-      if(P.env === 'yosemite'){ const y = (p.y + sec * (18 + p.s * 22)) % 620 - 10, x = p.x + Math.sin(sec * .8 + p.p) * 14;
-        g.fillStyle = `rgba(255,255,255,${(.35 + .5 * p.s) * k})`; g.beginPath(); g.arc(x, y, 1 + p.s * 2, 0, 6.29); g.fill(); }
-      else { const y = (p.y + sec * (420 + p.s * 200)) % 640 - 20, x = (p.x - (y - p.y) * .12 + 600) % 600;
-        g.strokeStyle = `rgba(170,205,255,${(.25 + .3 * p.s) * k})`; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y + 16); g.stroke(); }
-    }
-  } else if(P.env === 'jupiter'){
-    g.beginPath(); g.arc(300, 1010, 560, 0, 6.29); g.clip();
-    const cols = ['226,189,147','168,113,79','243,225,198','190,140,100','235,210,175'];
-    for(let i = 0; i < 18; i++){ const y = 450 + i * 14 + Math.sin(sec * .3 + i) * 1.5;
-      g.fillStyle = `rgba(${cols[i % 5]},${.55 * k})`; g.fillRect(0, y, 600, 15); }
-    const sx = 380 + Math.sin(sec * .05) * 30;
-    g.fillStyle = `rgba(200,90,60,${.75 * k})`; g.beginPath(); g.ellipse(sx, 530, 34, 15, 0, 0, 6.29); g.fill();
-    const sh = g.createLinearGradient(0, 0, 600, 0); sh.addColorStop(0, 'rgba(0,0,0,.85)'); sh.addColorStop(.4, 'rgba(0,0,0,0)');
-    g.fillStyle = sh; g.fillRect(0, 440, 600, 160);
-  }
-  g.restore();
-}
-setInterval(() => { if(P.env !== 'none' && !P.reduce) drawEnv(performance.now()); }, 50);
 
 /* ---------- boot ---------- */
 function apply(){
   const r = document.documentElement.style;
   r.setProperty('--accent', P.accent); r.setProperty('--ts', P.ts); r.setProperty('--bright', P.bright);
   document.body.classList.toggle('reduce', P.reduce);
-  drawEnv(performance.now());
 }
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
-apply(); initEnv();
+apply();
 history.replaceState({}, '');
 render(true);
 </script>
