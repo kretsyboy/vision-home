@@ -30,6 +30,8 @@ button,textarea,input{font:inherit;color:inherit;background:none;border:0;paddin
 :focus{outline:none}
 svg{display:block}
 #stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000}
+#wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:var(--wall);transition:opacity .4s var(--ease);pointer-events:none}
+#wall.under{opacity:calc(var(--wall) * .45)}
 #ui{position:absolute;inset:0;opacity:var(--bright)}
 .glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
@@ -204,6 +206,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 </head>
 <body>
 <div id="stage">
+  <video id="wall" src="wallpaper.mp4" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
   <div id="ui">
     <div id="home"></div>
     <div id="win" role="dialog"></div>
@@ -221,7 +224,7 @@ const now = () => Date.now();
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
-const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, tab:'apps',
+const DEF = { accent:'#64d2ff', ts:1, bright:.9, reduce:false, dnd:false, wall:.45, tab:'apps',
   people:[], notes:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
@@ -324,6 +327,7 @@ function render(fresh){
   homeEl.innerHTML = homeHTML();
   homeEl.classList.toggle('behind', !!V.app);
   homeEl.classList.toggle('dimmed', !!V.cc);
+  $('#wall').classList.toggle('under', !!(V.app || V.cc)); // keep windows readable over the video
   winEl.classList.toggle('open', !!V.app);
   winEl.innerHTML = V.app ? winHTML() : '';
   ccEl.classList.toggle('open', !!V.cc);
@@ -351,6 +355,13 @@ function honey(n, rows, y0 = 120, dy = 134){
   }
   return out;
 }
+/* circle: CENTER app in the middle, the others evenly around it starting at 12 o'clock */
+const CENTER = 'notes';
+function ring(apps, cx = 340, cy = 288, r = 164){
+  const around = apps.filter(a => a.id !== CENTER), out = { [CENTER]:{ x:cx, y:cy } };
+  around.forEach((a, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / around.length; out[a.id] = { x:cx + r * Math.cos(t), y:cy + r * Math.sin(t) }; });
+  return out;
+}
 const at = p => `left:${p.x - 48}px;top:${p.y - 44}px`;
 
 function homeHTML(){
@@ -371,8 +382,8 @@ function gridHTML(){
     const hint = list.length ? '' : `<div class="empty sub" style="top:${pos[0].y + 90}px">Add the people you keep in touch with to see their local time at a glance.</div>`;
     return html + add + hint;
   }
-  const pos = honey(APPS.length);
-  return APPS.map((a, i) => `<button class="icon" style="${at(pos[i])}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${i ? '' : 'data-default'} aria-label="${a.name}">
+  const pos = ring(APPS);
+  return APPS.map(a => `<button class="icon" style="${at(pos[a.id])}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === CENTER ? 'data-default' : ''} aria-label="${a.name}">
       ${discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id))}<span class="nm">${a.name}</span></button>`).join('');
 }
 function statusHTML(){
@@ -525,6 +536,7 @@ Object.assign(VIEWS, {
         <button class="lrow" data-k="s-accent" data-spin="accent" data-default><b>Accent color</b><span class="r" style="display:flex;gap:10px;align-items:center">◀ ${acc[0]} <i class="sw" style="background:${acc[1]}"></i> ▶</span></button>
         <button class="lrow" data-k="s-ts" data-spin="ts"><b>Text size</b><span class="r">◀ ${ts[0]} ▶</span></button>
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
+        ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-reset" data-act="resetAll"><b style="color:#ff8a84">${confirmKey === 'reset' ? 'Pinch again to erase everything' : 'Reset all data'}</b></button>
@@ -639,7 +651,7 @@ document.addEventListener('input', e => {
 });
 
 /* ---------- sliders and spinners ---------- */
-const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v } };
+const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v }, wall:{ min:0, get:() => P.wall, set:v => P.wall = v } };
 function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100, s.min, 1)); save(); apply(); render(); }
 const SPIN = {
   timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
@@ -783,6 +795,9 @@ function apply(){
   const r = document.documentElement.style;
   r.setProperty('--accent', P.accent); r.setProperty('--ts', P.ts); r.setProperty('--bright', P.bright);
   document.body.classList.toggle('reduce', P.reduce);
+  r.setProperty('--wall', P.wall);
+  const w = $('#wall'); // Reduce Motion freezes the wallpaper; 0% stops decoding entirely
+  if(P.reduce || P.wall <= 0) w.pause(); else w.play().catch(() => {});
 }
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();

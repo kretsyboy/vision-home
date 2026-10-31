@@ -1,24 +1,25 @@
 # SiteVue.AR Home: a visionOS-style menu for Meta Ray-Ban Display
 
-This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. It is a single `index.html` file (about 56 KB) with no build step, plus two PNG icons.
+This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on the 600×600 full-color display in the right lens. You control it with the Meta Neural Band. It is a single `index.html` file (about 57 KB) with no build step, plus two PNG icons and a looping wallpaper video (`wallpaper.mp4`, 600×600, 3.1 MB, with `wallpaper.jpg` shown while it loads).
 
 ## What carries over from Vision Pro, and how
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons in a honeycomb | The same honeycomb (2-3-2 for the 7 apps) of circular icons. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons | Round icons arranged in a circle: **Notes** in the center, with Clock, Weather, Compass, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |
 | Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Do Not Disturb, Reduce Motion, Recenter, Settings and Tips. |
 | Windows on glass, with a close button and window bar below | Each app opens in a glass window that springs out of its icon. Below the window are **×** and the window bar. Pinch the bar, then swipe or pinch-and-drag to move the window, and pinch again to drop it. |
 | People tab | The people you add, with their local time |
+| Wallpaper | A slow blue plasma video loops behind Home. It fades back when a window or Control Center is open. Set its strength in **Settings → Wallpaper** (default 45%, 0% turns it off). **Reduce Motion** freezes it. |
 
-**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge.
+**Why the glass looks different:** the display adds light to what you see. Black pixels are see-through, so a frosted backdrop blur would blur nothing. Instead, "glass" is a dim lit fill with a bright top edge. For the same reason, the wallpaper tints your whole view blue and uses more battery than a black background, so lower it in Settings if the world looks too blue.
 
 ## Apps
 
-Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (accent color, text size, brightness, reduce motion, Do Not Disturb, reset).
+Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (accent color, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
 
 Settings, people, notes, the timer and the stopwatch are saved in the glasses' local storage.
 
