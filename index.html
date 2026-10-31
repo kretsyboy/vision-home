@@ -868,13 +868,14 @@ function runIntro(){
     ], { duration:INTRO_MS, delay:i * 30, fill:'both' });
   });
   const assembled = INTRO_MS + LOGO.length * 30 + 60, SWEEP_MS = 1500; // light crossing the logo (it grows meanwhile)
+  const HOLD_MS = 3000; // the finished white logo stays on screen this long (a pinch still skips)
   boot.style.setProperty('--sweep', SWEEP_MS + 'ms'); $('#bootSweep').setAttribute('dur', SWEEP_MS / 1000 + 's');
   timers.push(setTimeout(() => { boot.classList.add('lit'); try { $('#bootSweep').beginElement(); } catch(e){} }, assembled));
   // the light's center moves linearly from x=-450 to x=4050 (logo units) over SWEEP_MS; a piece turns
   // white once the light has left it and reached the next letter (its right edge + a small gap)
   LOGO.forEach(([x, , w], i) => timers.push(setTimeout(() => whites[i].classList.add('on'),
     assembled + (x + w + 40 + 450) / 4500 * SWEEP_MS)));
-  timers.push(setTimeout(finish, assembled + SWEEP_MS + 350)); // a short hold after the light and growth finish
+  timers.push(setTimeout(finish, assembled + SWEEP_MS + HOLD_MS)); // linger on the white logo, then go to Home
 }
 
 /* ---------- boot ---------- */
