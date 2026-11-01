@@ -231,12 +231,13 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 #boot .pcs{left:0;top:0}
 #boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:3.6px} /* fixed thickness: only transform animates, so it stays on the GPU */
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-#boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .25s}
+#boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .45s var(--ease)}
+#boot .pcs{transition:opacity .45s var(--ease),visibility 0s .45s} /* crossfades into the flat logo, then stops drawing */
 #boot.lit .glow,#boot.lit .whole{opacity:1}
 /* once still, the logo grows slightly for exactly as long as the light takes to cross it */
 #boot .logo,#boot .glow{transition:scale var(--sweep,1.5s) cubic-bezier(.3,.2,.5,1),opacity .6s}
 #boot.lit .logo,#boot.lit .glow{scale:1.08}
-#boot.lit .pcs{visibility:hidden}
+#boot.lit .pcs{opacity:0;visibility:hidden}
 #boot .wh{opacity:0;transition:opacity .22s}
 #boot .wh.on{opacity:1}
 #home.boot{opacity:0}
@@ -295,7 +296,7 @@ const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, wall:.7
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
 if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; }
-if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend // the SiteVue-palette wallpaper is darker, so start it stronger once
+if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
 function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
@@ -390,6 +391,7 @@ function sub(arg){
 function openCC(){ history.pushState({ cc:1 }, ''); setView({ cc:1 }); }
 function back(){ if(V.app || V.cc) history.back(); }
 addEventListener('popstate', e => setView(e.state || {}));
+let RENDERED = false; // set by render(); lets the click handler skip a second, redundant render
 function setView(st){
   const prev = V; V = st || {};
   if(prev.app === 'training' && prev.arg === 'step' && !(V.app === 'training' && V.arg === 'step')) trainLeave();
@@ -403,16 +405,17 @@ function setView(st){
 
 /* ---------- render ---------- */
 function render(fresh){
+  RENDERED = true;
   const a = document.activeElement, keep = !fresh && a && a.dataset && a.dataset.k;
-  homeEl.innerHTML = homeHTML();
+  put(homeEl, homeHTML());
   homeEl.classList.toggle('behind', !!V.app);
   homeEl.classList.toggle('dimmed', !!V.cc);
   $('#wall').classList.toggle('under', !!(V.app || V.cc)); // keep windows readable over the video
   wallPlay();
   winEl.classList.toggle('open', !!V.app);
-  winEl.innerHTML = V.app ? winHTML() : '';
+  put(winEl, V.app ? winHTML() : '');
   ccEl.classList.toggle('open', !!V.cc);
-  ccEl.innerHTML = V.cc ? ccHTML() : '';
+  put(ccEl, V.cc ? ccHTML() : '');
   winAnim = ccAnim = false;
   const scope = V.cc ? ccEl : V.app ? winEl : homeEl;
   const want = keep || (!V.app && !V.cc && restore[P.tab]);
@@ -420,6 +423,8 @@ function render(fresh){
   if(!el) el = scope.querySelector('[data-default]') || focusables(scope)[0];
   if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' }); }
 }
+// replace a layer's markup only when it changed (re-parsing the whole home screen on every pinch is the main cost on the glasses)
+function put(el, html){ if(el._html !== html){ el.innerHTML = html; el._html = html; } }
 const focusables = s => [...s.querySelectorAll('button,textarea,input,[tabindex="0"]')].filter(e => !e.disabled && e.getClientRects().length);
 
 function discHTML(c1, c2, ink, inner, bgStyle){
@@ -610,7 +615,7 @@ Object.assign(VIEWS, {
     const card = [['N',0],['E',90],['S',180],['W',270]].map(([l, d]) => { const a = d * Math.PI / 180;
       return `<text x="${115 + 76 * Math.sin(a)}" y="${115 - 76 * Math.cos(a) + 9}" text-anchor="middle" font-size="26" font-weight="700" fill="${l === 'N' ? '#ff6b5e' : '#fff'}" transform="rotate(${d} ${115 + 76 * Math.sin(a)} ${115 - 76 * Math.cos(a)})">${l}</text>`; }).join('');
     return `<div class="eyebrow">Compass</div>
-      <div class="dial"><span class="needle"></span><svg data-live="dial" viewBox="0 0 230 230" style="rotate:${-(hd || 0)}deg">${ticks}${card}</svg></div>
+      <div class="dial"><span class="needle"></span><svg data-live="dial" viewBox="0 0 230 230" style="rotate:${dialTurn(-(hd || 0))}deg">${ticks}${card}</svg></div>
       <div class="center" style="gap:2px"><div class="title" data-live="heading">${hd == null ? 'Waiting for sensor…' : hd + '° ' + cardinal(hd)}</div>
         <div class="sub" data-live="level">${levelText()}</div></div>`;
   },
@@ -746,7 +751,7 @@ function tick(){
   if(V.app === 'settings'){ set('st-glasses', stHTML(glassesState()), true); set('st-band', stHTML(bandState()), true); set('btSummary', btSummary() + ' ›'); }
   if(V.app === 'compass' && C.on && C.heading != null){
     const hd = Math.round(C.heading), dial = q('dial');
-    if(dial) dial.style.rotate = -hd + 'deg';
+    if(dial) dial.style.rotate = dialTurn(-hd) + 'deg';
     set('heading', hd + '° ' + cardinal(hd) + (C.abs ? '' : ' (relative)')); set('level', levelText());
   }
 }
@@ -758,7 +763,7 @@ setInterval(tick, 250);
 const ACT = {
   tab(v){ P.tab = v; save(); render(); focusKey('tab-' + v); },
   cc(){ openCC(); },
-  app(v, b){ if(!V.app){ restore.apps = 'app-' + v; const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 44 }; }
+  app(v, b){ if(!V.app){ restore.apps = 'app-' + v; const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 36 }; }
     open(v); },
   close(){ back(); },
   grab(){ moving = !moving; toast(moving ? 'Swipe to move · pinch to drop' : 'Window placed'); },
@@ -807,7 +812,7 @@ const ACT = {
   wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon); },
   resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
 };
-function setOrigin(b){ const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 44 }; }
+function setOrigin(b){ const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 36 }; }
 function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e) e.focus({ preventScroll:true }); }
 
 /* The glasses' pointer rests mid-screen, right over Notes. In 'keys' mode (swipes and pinches) a pointer-made
@@ -834,9 +839,10 @@ document.addEventListener('click', e => {
   const b = target.closest('[data-act]'); if(!b) return;
   const act = b.dataset.act, before = confirmKey;
   if(!ACT[act]) return;
+  RENDERED = false;
   ACT[act](b.dataset.v, b);
   if(confirmKey === before && !['rmPerson','noteDel','resetAll','trainReset','punchOut'].includes(act)) confirmKey = null;
-  render();
+  if(!RENDERED || confirmKey !== before) render();
 });
 document.addEventListener('input', e => {
   const t = e.target;
@@ -960,14 +966,16 @@ async function enableSensors(){
       else if(e.alpha != null){ if(e.type === 'deviceorientationabsolute' || e.absolute){ C.abs = true; C.heading = (360 - e.alpha) % 360; } else if(!C.abs) C.heading = (360 - e.alpha) % 360; }
       C.beta = e.beta || 0; C.gamma = e.gamma || 0;
     };
-    addEventListener('deviceorientationabsolute', onO); addEventListener('deviceorientation', onO);
+    if(!C.listening){ addEventListener('deviceorientationabsolute', onO); addEventListener('deviceorientation', onO); C.listening = true; }
     C.on = true; C.err = ''; render(true);
   } catch(err){ C.err = 'Could not start sensors: ' + err.message; render(); }
 }
+let DIAL = 0; // unwrapped dial angle, so 359° -> 1° is a 2° step
+function dialTurn(a){ DIAL += ((a - DIAL) % 360 + 540) % 360 - 180; return DIAL; }
 const cardinal = d => ['N','NE','E','SE','S','SW','W','NW'][Math.round(d / 45) % 8];
 const levelText = () => `Tilt ${Math.round(C.beta)}° · Roll ${Math.round(C.gamma)}°`;
 function getWeather(){
-  if(!navigator.geolocation){ W.err = 'Location is not available.'; return; }
+  if(!navigator.geolocation){ W.err = 'Location is not available.'; return render(true); }
   W.loading = true; W.err = ''; render();
   navigator.geolocation.getCurrentPosition(p => fetchWx(p.coords.latitude, p.coords.longitude), err => {
     W.loading = false; W.err = err.code === 1 ? 'Location permission was declined. Allow it from the system menu → Permissions.' : err.code === 3 ? 'Timed out finding your location. Try again.' : 'Location is unavailable right now.';
@@ -978,9 +986,10 @@ async function fetchWx(lat, lon){
   W.loading = true; if(V.app === 'weather') render(true);
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5&wind_speed_unit=mph&temperature_unit=${P.units === 'F' ? 'fahrenheit' : 'celsius'}`;
-    const r = await fetch(u); if(!r.ok) throw new Error('HTTP ' + r.status);
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 12000);
+    const r = await fetch(u, { signal:ac.signal }).finally(() => clearTimeout(to)); if(!r.ok) throw new Error('HTTP ' + r.status);
     P.wx = { lat, lon, at:now(), data:await r.json() }; W.err = ''; save();
-  } catch(err){ W.err = 'Could not reach the forecast (' + err.message + ').'; }
+  } catch(err){ W.err = err.name === 'AbortError' ? 'The forecast took too long. Check the connection and try again.' : 'Could not reach the forecast (' + err.message + ').'; }
   W.loading = false; if(V.app === 'weather') render(true);
 }
 const wxAge = t => { const m = Math.round((now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' hr ago'; };
@@ -1058,7 +1067,7 @@ function runIntro(){
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
     let ly = '';
-    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="${side(j)}"/></svg>`;
+    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="${side(j)}"/></svg>`;
     ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#bootFill)" stroke="rgba(255,255,255,.55)" stroke-width="5"/></svg>`;
     return `<div class="pc" style="left:${x * K}px;top:${y * K}px;width:${w * K}px;height:${hh * K}px">${ly}</div>`;
   }).join('');
@@ -1091,6 +1100,9 @@ function runIntro(){
       { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
       { transform:T(0, 0, 0, 0, 0, 0) }                                                                     // locked in face-on (the flat logo then replaces the pieces)
     ], { duration:INTRO_MS, delay:i * 38, fill:'both' });
+    // the extruded sides fade away over the last stretch, so each piece arrives flat (opacity stays on the GPU)
+    el.querySelectorAll('.dp').forEach(d => d.animate([{ opacity:1 }, { opacity:1, offset:.8 }, { opacity:0 }],
+      { duration:INTRO_MS, delay:i * 38, fill:'both', easing:'ease-in-out' }));
   });
   const assembled = INTRO_MS + LOGO.length * 38 + 60, SWEEP_MS = 1900; // light crossing the logo (it grows meanwhile)
   const HOLD_MS = 3000; // the finished white logo stays on screen this long (a pinch still skips)
