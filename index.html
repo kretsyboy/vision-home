@@ -1016,7 +1016,7 @@ function runIntro(){
   addEventListener('keydown', skip, true); boot.addEventListener('click', skip);
   const whites = [...boot.querySelectorAll('.wh')];
   if(P.reduce){ boot.classList.add('lit'); timers.push(setTimeout(() => whites.forEach(w => w.classList.add('on')), 300), setTimeout(finish, 1500)); return; }
-  const INTRO_MS = 2350; // drift in 0.9 s, float 0.6 s, snap together 0.85 s
+  const INTRO_MS = 2950; // drift in 1.1 s, float 0.75 s, snap together 1.1 s
   const rand = a => (Math.random() * 2 - 1) * a;
   const T = (x, y, z, a, b, c, k = 1) => `translate3d(${x}px,${y}px,${z}px) rotateX(${a}deg) rotateY(${b}deg) rotateZ(${c}deg) scale3d(${k},${k},${k})`;
   [...pcs.children].forEach((el, i) => {
@@ -1027,9 +1027,9 @@ function runIntro(){
       { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), '--dz':'3.6px', offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
       { '--dz':'3.6px', offset:.9, easing:'ease-in' },                                                      // still thick on approach...
       { transform:T(0, 0, 0, 0, 0, 0), '--dz':'0px' }                                                       // ...flat once locked in
-    ], { duration:INTRO_MS, delay:i * 30, fill:'both' });
+    ], { duration:INTRO_MS, delay:i * 38, fill:'both' });
   });
-  const assembled = INTRO_MS + LOGO.length * 30 + 60, SWEEP_MS = 1500; // light crossing the logo (it grows meanwhile)
+  const assembled = INTRO_MS + LOGO.length * 38 + 60, SWEEP_MS = 1900; // light crossing the logo (it grows meanwhile)
   const HOLD_MS = 3000; // the finished white logo stays on screen this long (a pinch still skips)
   boot.style.setProperty('--sweep', SWEEP_MS + 'ms'); $('#bootSweep').setAttribute('dur', SWEEP_MS / 1000 + 's');
   timers.push(setTimeout(() => { boot.classList.add('lit'); try { $('#bootSweep').beginElement(); } catch(e){} }, assembled));
