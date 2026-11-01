@@ -355,6 +355,10 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
   { id:'settings', name:'Settings', bg:['#4a56b8','#161b4a'] }, // midnight navy
 ];
 const appBg = id => APPS.find(a => a.id === id).bg;
+const CITY_LL = { 'New York':[40.71,-74.01], 'Chicago':[41.88,-87.63], 'Denver':[39.74,-104.99], 'Phoenix':[33.45,-112.07],
+  'Los Angeles':[34.05,-118.24], 'Anchorage':[61.22,-149.9], 'Honolulu':[21.31,-157.86], 'Toronto':[43.65,-79.38], 'Mexico City':[19.43,-99.13],
+  'São Paulo':[-23.55,-46.63], 'London':[51.51,-0.13], 'Paris':[48.86,2.35], 'Berlin':[52.52,13.4], 'Dubai':[25.2,55.27], 'Mumbai':[19.08,72.88],
+  'Singapore':[1.35,103.82], 'Tokyo':[35.68,139.69], 'Seoul':[37.57,126.98], 'Sydney':[-33.87,151.21] };
 const CITIES = [
   ['New York','America/New_York'],['Chicago','America/Chicago'],['Denver','America/Denver'],['Phoenix','America/Phoenix'],
   ['Los Angeles','America/Los_Angeles'],['Anchorage','America/Anchorage'],['Honolulu','Pacific/Honolulu'],['Toronto','America/Toronto'],
@@ -542,7 +546,7 @@ function ccHTML(){
 
 /* ---------- apps ---------- */
 let ORIGIN = null, BAT = null;
-const W = { loading:false, err:'' };              // weather
+const W = { loading:false, err:'', city:0 };              // weather
 const K = { cur:'0', acc:null, op:null, fresh:true, expr:'' }; // calculator
 let D = { name:'', city:1 };                      // add person draft
 const swElapsed = () => P.sw.acc + (P.sw.start ? now() - P.sw.start : 0);
@@ -669,21 +673,28 @@ Object.assign(VIEWS, {
         ${started ? `<button class="lrow" data-k="tr-reset" data-act="trainReset"><b style="color:#ff8a84">${confirmKey === 'trreset' ? 'Pinch again to clear progress' : 'Reset progress'}</b></button>` : ''}
       </div>`;
   },
-  weather(){
+  weather(arg){
     const wx = P.wx;
-    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="title">Finding you…</div><div class="sub">Location comes from your paired phone.</div></div>`;
+    if(arg === 'city'){ const [city] = CITIES[W.city];
+      return `<div class="eyebrow">Weather</div><div class="title">Pick a city</div>
+        <div class="sub">No location access needed. Swipe left or right to change the city.</div>
+        <button class="spin" data-k="wxCity" data-spin="wxcity" data-default><span class="ar">◀</span>${city}<span class="ar">▶</span></button>
+        <button class="btn primary" data-k="wxGo" data-act="wxCity" style="margin-top:auto;flex:0 0 auto">Show weather</button>`; }
+    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="title">${W.place ? 'Loading ' + h(W.place) + '…' : 'Finding you…'}</div><div class="sub">${W.place ? 'Getting the forecast.' : 'Location comes from your paired phone.'}</div></div>`;
     if(!wx) return `<div class="eyebrow">Weather</div><div class="center">${discHTML(...appBg('weather'),'#fff',svg('weather'))}
         <div class="title">Local weather</div><div class="sub" style="max-width:400px">Uses your phone's location and the free Open-Meteo forecast.${W.err ? `<br><span style="color:#ff8a84">${h(W.err)}</span>` : ''}</div></div>
-        <button class="btn primary" data-k="wxLoc" data-act="wxLoc" data-default>${svg('loc')}Use my location</button>`;
+        <div class="row2" style="flex:0 0 auto"><button class="btn primary" data-k="wxLoc" data-act="wxLoc" data-default>${svg('loc')}Use my location</button>
+        <button class="btn" data-k="wxPick" data-act="wxPick">Pick a city</button></div>`;
     const c = wx.data.current, dl = wx.data.daily, u = '°';
     const days = dl.time.slice(0, 5).map((t, i) => `<div><span class="dim">${i ? new Date(t + 'T12:00').toLocaleDateString([], { weekday:'short' }) : 'Today'}</span><b>${Math.round(dl.temperature_2m_max[i])}${u}</b><span class="dim">${Math.round(dl.temperature_2m_min[i])}${u}</span></div>`).join('');
-    return `<div class="eyebrow">Weather · ${wxAge(wx.at)}</div>
+    return `<div class="eyebrow">Weather · ${wx.place ? h(wx.place) + ' · ' : ''}${wxAge(wx.at)}</div>
       <div class="wx-now"><div class="t">${Math.round(c.temperature_2m)}°</div><div><div class="title" style="font-size:1.5rem">${wxText(c.weather_code)}</div>
         <div class="sub">Feels ${Math.round(c.apparent_temperature)}° · H ${Math.round(dl.temperature_2m_max[0])}° L ${Math.round(dl.temperature_2m_min[0])}°</div>
         <div class="sub">Wind ${Math.round(c.wind_speed_10m)} mph · Humidity ${Math.round(c.relative_humidity_2m)}%</div></div></div>
       <div class="wx-days">${days}</div>
-      <div class="row2" style="margin-top:auto"><button class="btn" data-k="wxRefresh" data-act="wxLoc" data-default>${svg('refresh')}Refresh</button>
-        <button class="btn" data-k="wxUnits" data-act="wxUnits">°${P.units === 'F' ? 'C' : 'F'} instead</button></div>`;
+      <div class="row2" style="margin-top:auto"><button class="btn" data-k="wxRefresh" data-act="wxRefresh" data-default>${svg('refresh')}Refresh</button>
+        <button class="btn" data-k="wxUnits" data-act="wxUnits">°${P.units === 'F' ? 'C' : 'F'}</button>
+        <button class="btn" data-k="wxPick" data-act="wxPick">${wx.place ? 'City' : 'Pick city'}</button></div>`;
   },
   notes(arg){
     if(arg && arg.id){
@@ -865,7 +876,10 @@ const ACT = {
   noteDel(v){ if(confirmKey !== 'del'){ confirmKey = 'del'; return; } P.notes = P.notes.filter(n => n.id !== v); save(); toast('Note deleted'); back(); },
   calc(v){ calc(v); },
   wxLoc(){ getWeather(); },
-  wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon); },
+  wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon, P.wx.place); },
+  wxRefresh(){ if(P.wx && P.wx.place) fetchWx(P.wx.lat, P.wx.lon, P.wx.place); else getWeather(); },
+  wxPick(){ const k = P.wx && P.wx.place ? CITIES.findIndex(c => c[0] === P.wx.place) : -1; W.city = k >= 0 ? k : 0; sub('city'); },
+  wxCity(){ const [city] = CITIES[W.city], [lat, lon] = CITY_LL[city]; W.err = ''; history.back(); fetchWx(lat, lon, city); },
   resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
 };
 // windows zoom out of the icon's disc (works for the big center button too)
@@ -920,6 +934,7 @@ function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100
 const SPIN = {
   timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
   city:d => { D.city = (D.city + d + CITIES.length) % CITIES.length; },
+  wxcity:d => { W.city = (W.city + d + CITIES.length) % CITIES.length; },
   accent:d => { const i = ACCENTS.findIndex(a => a[1] === P.accent); P.accent = ACCENTS[(i + d + ACCENTS.length) % ACCENTS.length][1]; },
   ts:d => { const i = TEXT.findIndex(t => t[1] === P.ts); P.ts = TEXT[clamp(i + d, 0, TEXT.length - 1)][1]; },
 };
@@ -1019,20 +1034,36 @@ function calc(k){
   }
 }
 function getWeather(){
+  // inside the Mac app the web view has no location access of its own: ask the app, which uses macOS location services
+  const nat = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.svLocation;
+  if(nat){
+    W.loading = true; W.place = ''; W.err = ''; render();
+    const to = setTimeout(() => window.svNativeLocation(null, null, 'timeout'), 15000);
+    window.svNativeLocation = (lat, lon, err) => {
+      clearTimeout(to); window.svNativeLocation = null;
+      if(lat != null) return fetchWx(lat, lon);
+      W.loading = false;
+      W.err = err === 'denied' ? 'Location is off for SiteVue.AR Home. Turn it on in System Settings → Privacy & Security → Location Services, or pick a city.'
+        : err === 'timeout' ? 'Timed out finding your location. Try again or pick a city.' : 'Location is unavailable right now. Try again or pick a city.';
+      if(V.app === 'weather') render(true);
+    };
+    nat.postMessage('get');
+    return;
+  }
   if(!navigator.geolocation){ W.err = 'Location is not available.'; return render(true); }
-  W.loading = true; W.err = ''; render();
+  W.loading = true; W.place = ''; W.err = ''; render();
   navigator.geolocation.getCurrentPosition(p => fetchWx(p.coords.latitude, p.coords.longitude), err => {
     W.loading = false; W.err = err.code === 1 ? 'Location permission was declined. Allow it from the system menu → Permissions.' : err.code === 3 ? 'Timed out finding your location. Try again.' : 'Location is unavailable right now.';
     if(V.app === 'weather') render(true);
   }, { timeout:15000, maximumAge:600000 });
 }
-async function fetchWx(lat, lon){
-  W.loading = true; if(V.app === 'weather') render(true);
+async function fetchWx(lat, lon, place){ // place: a picked city's name (none = from your location)
+  W.loading = true; W.place = place || ''; if(V.app === 'weather') render(true);
   try {
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5&wind_speed_unit=mph&temperature_unit=${P.units === 'F' ? 'fahrenheit' : 'celsius'}`;
     const ac = new AbortController(), to = setTimeout(() => ac.abort(), 12000);
     const r = await fetch(u, { signal:ac.signal }).finally(() => clearTimeout(to)); if(!r.ok) throw new Error('HTTP ' + r.status);
-    P.wx = { lat, lon, at:now(), data:await r.json() }; W.err = ''; save();
+    P.wx = { lat, lon, place:place || '', at:now(), data:await r.json() }; W.err = ''; save();
   } catch(err){ W.err = err.name === 'AbortError' ? 'The forecast took too long. Check the connection and try again.' : 'Could not reach the forecast (' + err.message + ').'; }
   W.loading = false; if(V.app === 'weather') render(true);
 }
