@@ -274,6 +274,15 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   <div id="boot" aria-label="SiteVue AI">
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
       <linearGradient id="bootFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9f9fc"/><stop offset=".45" stop-color="#8fa4ff"/><stop offset="1" stop-color="#4c52f9"/></linearGradient>
+      <!-- mirror environment for the flying pieces (logo units, one 1400-wide tile that repeats seamlessly sideways):
+           a bright sky over dark ground, a lit horizon and light streaks, like a chrome surface reflecting a studio -->
+      <linearGradient id="envSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f8cff"/><stop offset=".42" stop-color="#2b3fd8"/>
+        <stop offset=".5" stop-color="#dce8ff"/><stop offset=".53" stop-color="#1b2490"/><stop offset=".75" stop-color="#070b3a"/><stop offset="1" stop-color="#02030f"/></linearGradient>
+      <linearGradient id="envStreak"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="envStreak2"><stop offset="0" stop-color="#7fd8ff" stop-opacity="0"/><stop offset=".5" stop-color="#9fe2ff" stop-opacity=".8"/><stop offset="1" stop-color="#7fd8ff" stop-opacity="0"/></linearGradient>
+      <g id="envTile"><rect width="1400" height="700" fill="url(#envSky)"/>
+        <polygon points="150,700 330,700 560,0 380,0" fill="url(#envStreak)"/><polygon points="700,700 760,700 980,0 920,0" fill="url(#envStreak2)"/>
+        <polygon points="1060,700 1180,700 1300,0 1180,0" fill="url(#envStreak)" opacity=".55"/></g>
       <linearGradient id="bootShine" gradientUnits="userSpaceOnUse" x1="-900" y1="0" x2="0" y2="0">
         <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
         <animateTransform id="bootSweep" attributeName="gradientTransform" type="translate" from="0 0" to="4500 0" dur="1.5s" begin="indefinite" fill="freeze"/>
@@ -1075,13 +1084,21 @@ Object.assign(ACT, {
 function runIntro(){
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
-  const DEPTH = 6, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
+  const DEPTH = 6;
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
+  // mirrors: each piece reflects the environment tile, sliding at its own speed and direction as it turns; the sides
+  // reflect the same world a little darker and offset (a second mirror at an angle to the face)
+  boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => {
+    const dir = i % 2 ? -1 : 1, dur = (1.3 + (i * 37 % 10) / 10).toFixed(2), env = (id, x0, shade) =>
+      `<pattern id="${id}" patternUnits="userSpaceOnUse" width="1400" height="700" y="-110"><use href="#envTile"/>${shade ? `<rect width="1400" height="700" fill="rgba(3,5,30,${shade})"/>` : ''}
+        <animateTransform attributeName="patternTransform" type="translate" values="${x0} 0;${x0 + dir * 1400} 0" dur="${dur}s" repeatCount="indefinite"/></pattern>`;
+    return env(`env${i}`, i * 173 % 1400, 0) + env(`envS${i}`, (i * 173 + 520) % 1400, .38);
+  }).join(''));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
     let ly = '';
-    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="${side(j)}"/></svg>`;
-    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#bootFill)" stroke="rgba(255,255,255,.55)" stroke-width="5"/></svg>`;
+    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="url(#envS${i})"/></svg>`;
+    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#env${i})" stroke="rgba(235,242,255,.8)" stroke-width="5"/></svg>`;
     return `<div class="pc" style="left:${x * K}px;top:${y * K}px;width:${w * K}px;height:${hh * K}px">${ly}</div>`;
   }).join('');
   // finished logo: gradient letters, a white copy of each piece (lit as the light passes it), then the moving light on top
