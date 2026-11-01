@@ -335,16 +335,16 @@ function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="current
 
 /* ---------- catalog ---------- */
 // icon gradients use the SiteVue palette (navy, electric indigo, violet-blue, periwinkle); all icon art is white
-const APPS = [ // each app has its own color (light top-left -> deep bottom-right), all dark enough for white art
-  { id:'clock', name:'Clock', bg:['#ffb36b','#ee6a12'] },       // orange
-  { id:'clockin', name:'Clock In', bg:['#ffa3d7','#d6338f'] }, // pink
-  { id:'weather', name:'Weather', bg:['#7fd3ff','#1f86ec'] },   // sky blue
-  { id:'compass', name:'Compass', bg:['#ff8f8f','#d92b3a'] },   // red
-  { id:'training', name:'Training', bg:['#6fe3a5','#119a58'] }, // green
-  { id:'notes', name:'Notes', bg:['#ffd166','#d99206'] },       // gold
-  { id:'calc', name:'Calculator', bg:['#a3acbf','#465063'] },   // slate
-  { id:'tips', name:'Tips', bg:['#e9a0ff','#9b33d6'] },         // purple
-  { id:'settings', name:'Settings', bg:['#8f98ff','#3d44e6'] }, // SiteVue indigo
+const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, periwinkle), spread in tone like the "Starry Night Sky" palette
+  { id:'clock', name:'Clock', bg:['#9eb2ff','#5a78e8'] },       // periwinkle
+  { id:'clockin', name:'Clock In', bg:['#b8a2e0','#6e56b8'] },  // violet mauve
+  { id:'weather', name:'Weather', bg:['#c3cdff','#7f8ff0'] },   // pale periwinkle
+  { id:'compass', name:'Compass', bg:['#8a9ac4','#3f4f86'] },   // blue slate
+  { id:'training', name:'Training', bg:['#7d86ff','#3b42e0'] }, // electric indigo
+  { id:'notes', name:'Notes', bg:['#9a86ff','#5337f9'] },       // violet-blue
+  { id:'calc', name:'Calculator', bg:['#5c6290','#1f2550'] },   // navy charcoal
+  { id:'tips', name:'Tips', bg:['#d0caff','#9a8cf0'] },         // lilac
+  { id:'settings', name:'Settings', bg:['#4a56b8','#161b4a'] }, // midnight navy
 ];
 const appBg = id => APPS.find(a => a.id === id).bg;
 const CITIES = [
