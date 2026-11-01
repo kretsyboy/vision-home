@@ -836,6 +836,9 @@ const ACT = {
   showStep(v){ SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
   showPlay(){ // works on the clip in place (no redraw), so it pauses and resumes on the exact frame
     const vd = document.querySelector('.showvid'), b = document.querySelector('[data-k="sh-play"]'); SHOW.paused = !SHOW.paused;
+    clearTimeout(SHOW.t);
+    // resuming a clip that already finished goes on to the next step (the click handler redraws), instead of replaying it
+    if(!SHOW.paused && vd && (vd.ended || vd.currentTime >= vd.duration - .05)) return ACT.showStep(1);
     if(vd){ if(SHOW.paused) vd.pause(); else vd.play().catch(() => {}); }
     if(b) b.textContent = SHOW.paused ? 'Play' : 'Pause';
     winEl._html = winHTML(); RENDERED = true; // the page now matches the new state: skip the click handler's redraw
