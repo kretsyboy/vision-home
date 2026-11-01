@@ -233,7 +233,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 /* each piece keeps its own 3D extrusion, but pieces never intersect: .pcs flattens them and paints back-to-front (see runIntro),
    with its own perspective so depth still reads */
 #boot .pcs{left:0;top:0;transform-style:flat;perspective:700px}
-#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:3.6px} /* fixed thickness: only transform animates, so it stays on the GPU */
+#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:1.6px} /* fixed thickness: only transform animates, so it stays on the GPU */
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 #boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .45s var(--ease)}
 #boot .pcs{transition:opacity .45s var(--ease),visibility 0s .45s} /* crossfades into the flat logo, then stops drawing */
@@ -1084,21 +1084,20 @@ Object.assign(ACT, {
 function runIntro(){
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
-  const DEPTH = 6;
+  const DEPTH = 14; // thin, tightly packed slices of one solid color, so the sides read as one solid block (no slice lines)
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
-  // mirrors: each piece reflects the environment tile, sliding at its own speed and direction as it turns; the sides
-  // reflect the same world a little darker and offset (a second mirror at an angle to the face)
+  // mirror faces: each piece reflects the environment tile, sliding at its own speed and direction as it turns
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => {
-    const dir = i % 2 ? -1 : 1, dur = (1.3 + (i * 37 % 10) / 10).toFixed(2), env = (id, x0, shade) =>
-      `<pattern id="${id}" patternUnits="userSpaceOnUse" width="1400" height="700" y="-110"><use href="#envTile"/>${shade ? `<rect width="1400" height="700" fill="rgba(3,5,30,${shade})"/>` : ''}
+    const dir = i % 2 ? -1 : 1, dur = (1.3 + (i * 37 % 10) / 10).toFixed(2), env = (id, x0) =>
+      `<pattern id="${id}" patternUnits="userSpaceOnUse" width="1400" height="700" y="-110"><use href="#envTile"/>
         <animateTransform attributeName="patternTransform" type="translate" values="${x0} 0;${x0 + dir * 1400} 0" dur="${dur}s" repeatCount="indefinite"/></pattern>`;
-    return env(`env${i}`, i * 173 % 1400, 0) + env(`envS${i}`, (i * 173 + 520) % 1400, .38);
+    return env(`env${i}`, i * 173 % 1400);
   }).join(''));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
     let ly = '';
-    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="url(#envS${i})"/></svg>`;
-    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#env${i})" stroke="rgba(235,242,255,.8)" stroke-width="5"/></svg>`;
+    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="#2c3cc0"/></svg>`;
+    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#env${i})"/></svg>`;
     return `<div class="pc" style="left:${x * K}px;top:${y * K}px;width:${w * K}px;height:${hh * K}px">${ly}</div>`;
   }).join('');
   // finished logo: gradient letters, a white copy of each piece (lit as the light passes it), then the moving light on top
