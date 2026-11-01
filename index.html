@@ -187,6 +187,11 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .seg button{height:48px;padding:0 18px;border-radius:24px;display:flex;align-items:center;gap:8px;font-weight:600;font-size:1.02rem;color:var(--ink-2)}
 .seg button svg{width:20px;height:20px}
 .seg button.sel{background:rgba(255,255,255,.22);color:#fff}
+.wx-now{display:flex;align-items:center;gap:20px}
+.wx-now .t{font-size:5rem;font-weight:600;letter-spacing:-.03em;line-height:1}
+.wx-days{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wx-days div{background:var(--glass-b);border-radius:18px;padding:10px 4px;text-align:center;font-size:.95rem}
+.wx-days b{display:block;font-size:1.15rem}
 .swtime{font-size:4.6rem;font-weight:600;letter-spacing:-.03em;text-align:center;line-height:1.1}
 .calc-d{text-align:right;font-weight:500;line-height:1;padding:6px 8px 4px;min-height:70px;white-space:nowrap;overflow:hidden}
 .calc-d small{display:block;font-size:1rem;color:var(--ink-3);min-height:20px}
@@ -195,10 +200,6 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .keys .op{background:rgba(255,159,10,.85);color:#000}
 .keys .op.on{background:#fff}
 .keys .fn{background:rgba(255,255,255,.3)}
-.dial{position:relative;width:230px;height:230px;margin:0 auto}
-.dial svg{width:230px;height:230px;transition:rotate .2s linear}
-.dial .needle{position:absolute;left:50%;top:-4px;translate:-50% 0;width:0;height:0;
-  border-left:10px solid transparent;border-right:10px solid transparent;border-top:16px solid var(--accent)}
 textarea{width:100%;flex:1;min-height:0;resize:none;border-radius:24px;background:var(--glass-b);padding:16px 18px;
   font-size:1.25rem;line-height:1.35;cursor:text}
 input[type=text]{width:100%;height:62px;border-radius:31px;background:var(--glass-2);padding:0 22px;font-size:1.2rem;cursor:text}
@@ -298,9 +299,8 @@ const now = () => Date.now();
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
 const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, wall:.7, see:0, tab:'apps',
-  people:[], notes:[], tasks:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] } };
+  people:[], notes:[], tasks:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
-delete P.wx; delete P.units; // Weather was removed
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
 if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; }
 if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend
@@ -313,7 +313,7 @@ const G = {
   clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/>',
   timer:'<path d="M7 3h10M7 21h10M8 3v2.5a4 4 0 0 0 1.7 3.3L12 10.5l2.3-1.7A4 4 0 0 0 16 5.5V3M8 21v-2.5a4 4 0 0 1 1.7-3.3L12 13.5l2.3 1.7a4 4 0 0 1 1.7 3.3V21"/>',
   stopwatch:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M12 2.5V6M18.4 6.6l1.4-1.4"/>',
-  compass:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  weather:'<circle cx="9" cy="8.5" r="3"/><path d="M9 2.5v1.4M3.5 8.5H2.2M4.6 4.1l1 1M13.4 4.1l-1 1"/><path d="M8 20h9a3.5 3.5 0 0 0 .4-7 4.6 4.6 0 0 0-8.9 1.2A2.9 2.9 0 0 0 8 20z"/>',
   notes:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/>',
   calc:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 18.5h.01M12 18.5h3.5"/>',
   glasses:'<circle cx="6.5" cy="13.5" r="3.6"/><circle cx="17.5" cy="13.5" r="3.6"/><path d="M10.1 13c1.2-.9 2.6-.9 3.8 0M2.9 13.5 2 9M21.1 13.5 22 9"/>',
@@ -346,7 +346,7 @@ function batSvg(p){ return `<svg viewBox="0 0 28 24" fill="none" stroke="current
 const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, periwinkle), spread in tone like the "Starry Night Sky" palette
   { id:'clock', name:'Clock', bg:['#9eb2ff','#5a78e8'] },       // periwinkle
   { id:'clockin', name:'Clock In', bg:['#b8a2e0','#6e56b8'] },  // violet mauve
-  { id:'compass', name:'Compass', bg:['#8a9ac4','#3f4f86'] },   // blue slate
+  { id:'weather', name:'Weather', bg:['#c3cdff','#7f8ff0'] },   // pale periwinkle
   { id:'training', name:'Training', bg:['#7d86ff','#3b42e0'] }, // electric indigo
   { id:'tasks', name:'Tasks', bg:['#8fd3ff','#2a86d8'] },       // sky blue
   { id:'notes', name:'Notes', bg:['#9a86ff','#5337f9'] },       // violet-blue
@@ -542,7 +542,7 @@ function ccHTML(){
 
 /* ---------- apps ---------- */
 let ORIGIN = null, BAT = null;
-const C = { on:false, heading:null, beta:0, gamma:0, abs:false, err:'' }; // compass
+const W = { loading:false, err:'' };              // weather
 const K = { cur:'0', acc:null, op:null, fresh:true, expr:'' }; // calculator
 let D = { name:'', city:1 };                      // add person draft
 const swElapsed = () => P.sw.acc + (P.sw.start ? now() - P.sw.start : 0);
@@ -669,19 +669,21 @@ Object.assign(VIEWS, {
         ${started ? `<button class="lrow" data-k="tr-reset" data-act="trainReset"><b style="color:#ff8a84">${confirmKey === 'trreset' ? 'Pinch again to clear progress' : 'Reset progress'}</b></button>` : ''}
       </div>`;
   },
-  compass(){
-    if(!C.on) return `<div class="eyebrow">Compass</div><div class="center">${discHTML(...appBg('compass'),'#fff',svg('compass'))}
-        <div class="title">Head compass</div><div class="sub" style="max-width:400px">Uses the glasses' motion sensors, so it points where you look.${C.err ? `<br><span style="color:#ff8a84">${h(C.err)}</span>` : ''}</div></div>
-        <button class="btn primary" data-k="compassOn" data-act="compassOn" data-default>Start compass</button>`;
-    const hd = C.heading == null ? null : Math.round(C.heading);
-    const ticks = Array.from({length:72}, (_, i) => { const a = i * 5 * Math.PI / 180, r1 = i % 6 ? 104 : 96;
-      return `<line x1="${115 + r1 * Math.sin(a)}" y1="${115 - r1 * Math.cos(a)}" x2="${115 + 110 * Math.sin(a)}" y2="${115 - 110 * Math.cos(a)}" stroke="rgba(255,255,255,${i % 6 ? .35 : .8})" stroke-width="${i % 18 ? 1.5 : 3}"/>`; }).join('');
-    const card = [['N',0],['E',90],['S',180],['W',270]].map(([l, d]) => { const a = d * Math.PI / 180;
-      return `<text x="${115 + 76 * Math.sin(a)}" y="${115 - 76 * Math.cos(a) + 9}" text-anchor="middle" font-size="26" font-weight="700" fill="${l === 'N' ? '#ff6b5e' : '#fff'}" transform="rotate(${d} ${115 + 76 * Math.sin(a)} ${115 - 76 * Math.cos(a)})">${l}</text>`; }).join('');
-    return `<div class="eyebrow">Compass</div>
-      <div class="dial"><span class="needle"></span><svg data-live="dial" viewBox="0 0 230 230" style="rotate:${dialTurn(-(hd || 0))}deg">${ticks}${card}</svg></div>
-      <div class="center" style="gap:2px"><div class="title" data-live="heading">${hd == null ? 'Waiting for sensor…' : hd + '° ' + cardinal(hd)}</div>
-        <div class="sub" data-live="level">${levelText()}</div></div>`;
+  weather(){
+    const wx = P.wx;
+    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="title">Finding you…</div><div class="sub">Location comes from your paired phone.</div></div>`;
+    if(!wx) return `<div class="eyebrow">Weather</div><div class="center">${discHTML(...appBg('weather'),'#fff',svg('weather'))}
+        <div class="title">Local weather</div><div class="sub" style="max-width:400px">Uses your phone's location and the free Open-Meteo forecast.${W.err ? `<br><span style="color:#ff8a84">${h(W.err)}</span>` : ''}</div></div>
+        <button class="btn primary" data-k="wxLoc" data-act="wxLoc" data-default>${svg('loc')}Use my location</button>`;
+    const c = wx.data.current, dl = wx.data.daily, u = '°';
+    const days = dl.time.slice(0, 5).map((t, i) => `<div><span class="dim">${i ? new Date(t + 'T12:00').toLocaleDateString([], { weekday:'short' }) : 'Today'}</span><b>${Math.round(dl.temperature_2m_max[i])}${u}</b><span class="dim">${Math.round(dl.temperature_2m_min[i])}${u}</span></div>`).join('');
+    return `<div class="eyebrow">Weather · ${wxAge(wx.at)}</div>
+      <div class="wx-now"><div class="t">${Math.round(c.temperature_2m)}°</div><div><div class="title" style="font-size:1.5rem">${wxText(c.weather_code)}</div>
+        <div class="sub">Feels ${Math.round(c.apparent_temperature)}° · H ${Math.round(dl.temperature_2m_max[0])}° L ${Math.round(dl.temperature_2m_min[0])}°</div>
+        <div class="sub">Wind ${Math.round(c.wind_speed_10m)} mph · Humidity ${Math.round(c.relative_humidity_2m)}%</div></div></div>
+      <div class="wx-days">${days}</div>
+      <div class="row2" style="margin-top:auto"><button class="btn" data-k="wxRefresh" data-act="wxLoc" data-default>${svg('refresh')}Refresh</button>
+        <button class="btn" data-k="wxUnits" data-act="wxUnits">°${P.units === 'F' ? 'C' : 'F'} instead</button></div>`;
   },
   notes(arg){
     if(arg && arg.id){
@@ -797,11 +799,6 @@ function tick(){
   if(V.app === 'clockin' && !V.arg){ const u = PU(); set('punchState', punchState()); set('punchTime', fmtDur(workedNow())); if(u.in) set('punchBrk', 'Break ' + fmtDur(brkMs())); set('punchTotals', `Today ${hrs(workedSince(dayStart()))} · Week ${hrs(workedSince(weekStart()))} ›`); }
   if(V.app === 'training' && V.arg === 'step'){ const t = TR(); set('trtime', 'On this step ' + fmtDur(now() - (t.stepAt || now()))); if(t.cure) set('cure', cureText()); }
   if(V.app === 'settings'){ set('st-glasses', stHTML(glassesState()), true); set('st-band', stHTML(bandState()), true); set('btSummary', btSummary() + ' ›'); }
-  if(V.app === 'compass' && C.on && C.heading != null){
-    const hd = Math.round(C.heading), dial = q('dial');
-    if(dial) dial.style.rotate = dialTurn(-hd) + 'deg';
-    set('heading', hd + '° ' + cardinal(hd) + (C.abs ? '' : ' (relative)')); set('level', levelText());
-  }
 }
 const q = k => document.querySelector(`[data-live="${k}"]`);
 function set(k, v, html){ const e = q(k); if(!e) return; if(html){ if(e.innerHTML !== v) e.innerHTML = v; } else if(e.textContent !== v) e.textContent = v; }
@@ -862,12 +859,13 @@ const ACT = {
   timerReset(){ P.timer.end = null; P.timer.left = null; save(); },
   swGo(){ const s = P.sw; if(s.start){ s.acc += now() - s.start; s.start = null; } else s.start = now(); save(); },
   swLap(){ const s = P.sw; if(s.start){ s.laps.push(swElapsed()); if(s.laps.length > 50) s.laps.shift(); } else { s.acc = 0; s.laps = []; } save(); },
-  compassOn(){ enableSensors(); },
   noteNew(){ const n = { id:Math.random().toString(36).slice(2, 9), text:'', at:now() }; P.notes.unshift(n); save(); sub({ id:n.id }); },
   noteOpen(v){ sub({ id:v }); },
   noteSpeak(v){ const n = P.notes.find(x => x.id === v); if(n && n.text.trim()) speak(n.text, true); else toast('Nothing to read'); },
   noteDel(v){ if(confirmKey !== 'del'){ confirmKey = 'del'; return; } P.notes = P.notes.filter(n => n.id !== v); save(); toast('Note deleted'); back(); },
   calc(v){ calc(v); },
+  wxLoc(){ getWeather(); },
+  wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon); },
   resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
 };
 // windows zoom out of the icon's disc (works for the big center button too)
@@ -1020,26 +1018,29 @@ function calc(k){
     K.op = k; K.fresh = true; K.expr = `${fmt(K.acc)} ${k}`;
   }
 }
-async function enableSensors(){
-  try {
-    if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
-      const r = await DeviceOrientationEvent.requestPermission();
-      if(r !== 'granted'){ C.err = 'Motion permission was declined. Allow it from the system menu (middle tap) → Permissions.'; return render(); }
-    }
-    if(!window.DeviceOrientationEvent){ C.err = 'This device has no orientation sensor.'; return render(); }
-    const onO = e => {
-      if(e.webkitCompassHeading != null){ C.heading = e.webkitCompassHeading; C.abs = true; }
-      else if(e.alpha != null){ if(e.type === 'deviceorientationabsolute' || e.absolute){ C.abs = true; C.heading = (360 - e.alpha) % 360; } else if(!C.abs) C.heading = (360 - e.alpha) % 360; }
-      C.beta = e.beta || 0; C.gamma = e.gamma || 0;
-    };
-    if(!C.listening){ addEventListener('deviceorientationabsolute', onO); addEventListener('deviceorientation', onO); C.listening = true; }
-    C.on = true; C.err = ''; render(true);
-  } catch(err){ C.err = 'Could not start sensors: ' + err.message; render(); }
+function getWeather(){
+  if(!navigator.geolocation){ W.err = 'Location is not available.'; return render(true); }
+  W.loading = true; W.err = ''; render();
+  navigator.geolocation.getCurrentPosition(p => fetchWx(p.coords.latitude, p.coords.longitude), err => {
+    W.loading = false; W.err = err.code === 1 ? 'Location permission was declined. Allow it from the system menu → Permissions.' : err.code === 3 ? 'Timed out finding your location. Try again.' : 'Location is unavailable right now.';
+    if(V.app === 'weather') render(true);
+  }, { timeout:15000, maximumAge:600000 });
 }
-let DIAL = 0; // unwrapped dial angle, so 359° -> 1° is a 2° step
-function dialTurn(a){ DIAL += ((a - DIAL) % 360 + 540) % 360 - 180; return DIAL; }
-const cardinal = d => ['N','NE','E','SE','S','SW','W','NW'][Math.round(d / 45) % 8];
-const levelText = () => `Tilt ${Math.round(C.beta)}° · Roll ${Math.round(C.gamma)}°`;
+async function fetchWx(lat, lon){
+  W.loading = true; if(V.app === 'weather') render(true);
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5&wind_speed_unit=mph&temperature_unit=${P.units === 'F' ? 'fahrenheit' : 'celsius'}`;
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 12000);
+    const r = await fetch(u, { signal:ac.signal }).finally(() => clearTimeout(to)); if(!r.ok) throw new Error('HTTP ' + r.status);
+    P.wx = { lat, lon, at:now(), data:await r.json() }; W.err = ''; save();
+  } catch(err){ W.err = err.name === 'AbortError' ? 'The forecast took too long. Check the connection and try again.' : 'Could not reach the forecast (' + err.message + ').'; }
+  W.loading = false; if(V.app === 'weather') render(true);
+}
+const wxAge = t => { const m = Math.round((now() - t) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m / 60) + ' hr ago'; };
+function wxText(c){
+  return c === 0 ? 'Clear' : c <= 2 ? 'Partly cloudy' : c === 3 ? 'Cloudy' : c <= 48 ? 'Fog' : c <= 57 ? 'Drizzle' : c <= 67 ? 'Rain'
+    : c <= 77 ? 'Snow' : c <= 82 ? 'Showers' : c <= 86 ? 'Snow showers' : 'Thunderstorms';
+}
 let toastT;
 function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1600); }
 
