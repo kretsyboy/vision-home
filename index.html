@@ -274,15 +274,6 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   <div id="boot" aria-label="SiteVue AI">
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
       <linearGradient id="bootFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9f9fc"/><stop offset=".45" stop-color="#8fa4ff"/><stop offset="1" stop-color="#4c52f9"/></linearGradient>
-      <!-- flying pieces: glossy blue glass (a bright top, a deep body and a thin specular line), plus a white
-           reflection streak that keeps sliding across every face while the pieces float -->
-      <linearGradient id="bootGloss" x1="0" y1="0" x2=".7" y2="1"><stop offset="0" stop-color="#e6efff"/><stop offset=".3" stop-color="#7d9cff"/>
-        <stop offset=".47" stop-color="#3d4ff2"/><stop offset=".5" stop-color="#b9d0ff"/><stop offset=".54" stop-color="#4a5cf6"/><stop offset="1" stop-color="#1a1f9e"/></linearGradient>
-      <linearGradient id="bootRefl" x1="0" y1="0" x2="1" y2=".55">
-        <stop offset=".34" stop-color="#fff" stop-opacity="0"/><stop offset=".46" stop-color="#fff" stop-opacity=".18"/><stop offset=".5" stop-color="#fff" stop-opacity=".9"/>
-        <stop offset=".54" stop-color="#fff" stop-opacity=".18"/><stop offset=".66" stop-color="#fff" stop-opacity="0"/>
-        <animateTransform attributeName="gradientTransform" type="translate" values="-1.1 0;1.1 0" dur="1.7s" repeatCount="indefinite"/>
-      </linearGradient>
       <linearGradient id="bootShine" gradientUnits="userSpaceOnUse" x1="-900" y1="0" x2="0" y2="0">
         <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
         <animateTransform id="bootSweep" attributeName="gradientTransform" type="translate" from="0 0" to="4500 0" dur="1.5s" begin="indefinite" fill="freeze"/>
@@ -1084,14 +1075,13 @@ Object.assign(ACT, {
 function runIntro(){
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
-  // sides: a bright cyan rim right behind the face (like lit glass edges), falling off to deep navy
-  const DEPTH = 6, side = j => { if(j === 1) return '#9cc8ff'; const t = (j - 2) / (DEPTH - 2), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(70, 14)},${m(104, 16)},${m(250, 96)})`; };
+  const DEPTH = 6, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
     let ly = '';
     for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="${side(j)}"/></svg>`;
-    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#bootGloss)" stroke="rgba(214,232,255,.75)" stroke-width="5"/><use href="#lp${i}" fill="url(#bootRefl)"/></svg>`;
+    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#bootFill)" stroke="rgba(255,255,255,.55)" stroke-width="5"/></svg>`;
     return `<div class="pc" style="left:${x * K}px;top:${y * K}px;width:${w * K}px;height:${hh * K}px">${ly}</div>`;
   }).join('');
   // finished logo: gradient letters, a white copy of each piece (lit as the light passes it), then the moving light on top
