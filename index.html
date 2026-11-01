@@ -155,6 +155,7 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .trk .bar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
 .trk .bar i{display:block;height:100%;background:var(--accent)}
 .sttl{font-size:1.45rem;font-weight:700;line-height:1.2}
+.showvid{display:block;width:100%;height:250px;object-fit:cover;border-radius:18px;flex:0 0 auto;background:#fff}
 .stimg{display:block;width:100%;height:104px;object-fit:cover;border-radius:18px;flex:0 0 auto;background:#fff}
 .sdet{font-size:1rem;line-height:1.4;color:var(--ink-2)}
 .call{border-radius:18px;padding:10px 14px;font-size:.92rem;line-height:1.35;background:rgba(255,214,10,.12);border:1px solid rgba(255,214,10,.45)}
@@ -589,6 +590,18 @@ function trainLeave(){ const t = TR(); if(t.stepAt){ t.times[t.cur] = (t.times[t
 function trainGo(i){ const t = TR(); trainLeave(); t.cur = clamp(i, 0, SOP.steps.length - 1); t.stepAt = now(); if(!t.start) t.start = now(); save(); }
 const doneCount = () => Object.keys(TR().done).length;
 function cureText(){ const t = TR(); if(!t.cure) return ''; const left = t.cure + CURE_MS - now(); return left > 0 ? 'Handling strength in ' + fmtDur(left) : 'Handling strength reached ✓'; }
+// step animations arrive as data: URLs inside sop.js; play them from blob URLs (made once, on first use)
+const BLOBS = new Map();
+function blobURL(d){
+  if(!d || !d.startsWith('data:')) return d;
+  let u = BLOBS.get(d);
+  if(!u){ const [hd, b64] = d.split(','), bin = atob(b64), a = new Uint8Array(bin.length);
+    for(let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k);
+    u = URL.createObjectURL(new Blob([a], { type:hd.slice(5).split(';')[0] })); BLOBS.set(d, u); }
+  return u;
+}
+const SHOW = { i:0, paused:false, t:0 };           // "Watch the assembly" slideshow
+const hasVideo = () => SOP.steps.some(st => st[7]);
 const chk = on => `<span class="chk ${on ? 'on' : ''}">${on ? svg('check') : ''}</span>`;
 
 Object.assign(VIEWS, {
@@ -609,10 +622,19 @@ Object.assign(VIEWS, {
         <div class="row2"><button class="btn" data-k="tr-again" data-act="trainReset">${confirmKey === 'trreset' ? 'Pinch again' : 'Start over'}</button>
         <button class="btn primary" data-k="tr-home" data-act="close" data-default>Done</button></div>`;
     }
+    if(arg === 'show'){
+      const i = SHOW.i, st = SOP.steps[i];
+      return `<div class="trk"><span>Assembly animation</span><span class="bar"><i style="width:${(100 * (i + 1) / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
+        <video class="showvid" data-show="${i}" src="${blobURL(st[7])}"${st[6] ? ` poster="${st[6]}"` : ''} ${SHOW.paused ? '' : 'autoplay'} muted playsinline></video>
+        <div class="sttl" style="font-size:1.25rem">${st[1]}</div>
+        <div class="row2" style="margin-top:auto;flex:0 0 auto"><button class="btn" data-k="sh-prev" data-act="showStep" data-v="-1">◀</button>
+          <button class="btn primary" data-k="sh-play" data-act="showPlay" data-default style="flex:1.6">${SHOW.paused ? 'Play' : 'Pause'}</button>
+          <button class="btn" data-k="sh-next" data-act="showStep" data-v="1">▶</button></div>`;
+    }
     if(arg === 'step'){
-      const i = t.cur, [sec, head, det, call, ppe, cure, img] = SOP.steps[i];
+      const i = t.cur, [sec, head, det, call, ppe, cure, img, vid] = SOP.steps[i];
       return `<div class="trk"><span>${sec}</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
-        ${img ? `<img class="stimg" src="${img}" alt="">` : ''}
+        ${vid ? `<video class="stimg" src="${blobURL(vid)}"${img ? ` poster="${img}"` : ''} autoplay muted loop playsinline></video>` : img ? `<img class="stimg" src="${img}" alt="">` : ''}
         <div class="sttl">${t.done[i] ? '✓ ' : ''}${head}</div><div class="sdet">${det}</div>
         ${ppe ? `<div class="chips">${ppe.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
         ${call ? `<div class="call ${call[0] === 'CAUTION' ? 'caution' : ''}"><b>${call[0]}</b>${call[1]}</div>` : ''}
@@ -634,6 +656,7 @@ Object.assign(VIEWS, {
       <div class="trk" style="margin-top:6px"><span>${d} of ${n} steps</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span></div>
       <div class="list" style="margin-top:4px">
         <button class="lrow" data-k="tr-start" data-act="trainOpen" data-v="step" data-default style="background:var(--accent);color:#000"><b>${started ? 'Resume · step ' + (t.cur + 1) : 'Start training'}</b><span>›</span></button>
+        ${hasVideo() ? `<button class="lrow" data-k="tr-show" data-act="trainShow"><b>▶ Watch the assembly</b><span class="r">${n} animations ›</span></button>` : ''}
         <button class="lrow" data-k="tr-ppe" data-act="trainOpen" data-v="ppe"><b>Safety & PPE</b><span class="r">${Object.values(t.ppe).filter(Boolean).length}/${SOP.ppe.length} ›</span></button>
         <button class="lrow" data-k="tr-tools" data-act="trainOpen" data-v="tools"><b>Tools & supplies</b><span class="r">${Object.values(t.tools).filter(Boolean).length}/${SOP.tools.reduce((a, g) => a + g[1].length, 0)} ›</span></button>
         ${started ? `<button class="lrow" data-k="tr-reset" data-act="trainReset"><b style="color:#ff8a84">${confirmKey === 'trreset' ? 'Pinch again to clear progress' : 'Reset progress'}</b></button>` : ''}
@@ -802,6 +825,10 @@ const ACT = {
   },
   clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; history.replaceState(st, ''); V = st; },
   btOpen(v){ const st = { app:'settings', arg:v }; history.pushState(st, ''); setView(st); },
+  trainShow(){ SHOW.i = 0; SHOW.paused = false; const st = { app:'training', arg:'show' }; history.pushState(st, ''); setView(st); },
+  showStep(v){ SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
+  showPlay(){ const vd = document.querySelector('.showvid'); SHOW.paused = !SHOW.paused;
+    if(vd){ if(SHOW.paused) vd.pause(); else vd.play().catch(() => {}); } },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; history.pushState(st, ''); setView(st); },
   trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; history.pushState(st, ''); setView(st); }, // back returns to the overview
   trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
@@ -862,6 +889,11 @@ document.addEventListener('click', e => {
   if(confirmKey === before && !['rmPerson','noteDel','resetAll','trainReset','punchOut','tkClear'].includes(act)) confirmKey = null;
   if(!RENDERED || confirmKey !== before) render();
 });
+document.addEventListener('ended', e => {
+  const vd = e.target; if(!vd.dataset || vd.dataset.show == null) return;
+  clearTimeout(SHOW.t);
+  SHOW.t = setTimeout(() => { if(V.app === 'training' && V.arg === 'show' && !SHOW.paused && SHOW.i === +vd.dataset.show){ ACT.showStep(1); render(); } }, 1500);
+}, true);
 document.addEventListener('input', e => {
   const t = e.target;
   if(t.dataset.note){ const n = P.notes.find(x => x.id === t.dataset.note); if(n){ n.text = t.value; n.at = now(); save(); } }
