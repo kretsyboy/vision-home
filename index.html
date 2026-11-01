@@ -420,7 +420,10 @@ function render(fresh){
   $('#wall').classList.toggle('under', !!(V.app || V.cc)); // keep windows readable over the video
   wallPlay();
   winEl.classList.toggle('open', !!V.app);
+  const sv = winEl.querySelector('.showvid'), svAt = sv && { i:sv.dataset.show, t:sv.currentTime }; // slideshow clip position
   put(winEl, V.app ? winHTML() : '');
+  const nv = winEl.querySelector('.showvid'); // a redraw (e.g. Pause/Play) rebuilds the clip: keep it on the same frame
+  if(nv && svAt && nv !== sv && nv.dataset.show === svAt.i){ nv.currentTime = svAt.t; if(SHOW.paused) nv.pause(); }
   ccEl.classList.toggle('open', !!V.cc);
   put(ccEl, V.cc ? ccHTML() : '');
   winAnim = ccAnim = false;
