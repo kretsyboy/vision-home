@@ -67,20 +67,20 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .tab:focus .lbl{opacity:1;scale:1}
 .icon{position:absolute;width:96px;display:flex;flex-direction:column;align-items:center;gap:14px;border-radius:50%}
 .icon:focus{box-shadow:none}
-.icon.hero{width:170px}
-.icon.hero .disc{width:170px;height:170px}
+.icon.hero{width:150px}
+.icon.hero .disc{width:150px;height:150px}
 .icon.hero .fg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-.icon.hero .fg svg{width:70px;height:70px}
-.icon.hero .fg b{font-size:1.2rem;font-weight:700;letter-spacing:.01em}
+.icon.hero .fg svg{width:62px;height:62px}
+.icon.hero .fg b{font-size:1.1rem;font-weight:700;letter-spacing:.01em}
 .icon.hero:focus .disc{scale:1.03}
-.disc{position:relative;width:72px;height:72px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
+.disc{position:relative;width:64px;height:64px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
 .disc .bg{position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 34% 24%,var(--c1),var(--c2) 78%)}
 .disc::after{content:"";position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.42),transparent 52%);pointer-events:none}
 .disc .fg{position:absolute;inset:0;display:grid;place-items:center;transition:translate .3s var(--spring),scale .3s var(--spring)}
-.disc .fg svg{width:36px;height:36px}
-.disc .ini{font-size:25px;font-weight:700;letter-spacing:.02em}
+.disc .fg svg{width:32px;height:32px}
+.disc .ini{font-size:22px;font-weight:700;letter-spacing:.02em}
 .icon .nm{font-size:.95rem;font-weight:600;color:var(--ink-2);white-space:nowrap;line-height:1.15;text-align:center}
 .icon .nm small{display:block;font-size:.8rem;font-weight:500;color:var(--ink-3)}
 /* gaze highlight: the disc lifts, the glyph layer moves further than the backplate (parallax) */
@@ -457,7 +457,7 @@ function ring(apps, cx = 340, cy = 280, rx = 188, ry = rx){
   around.forEach((a, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / around.length; out[a.id] = { x:cx + rx * Math.cos(t), y:cy + ry * Math.sin(t) }; });
   return out;
 }
-const at = (p, big) => big ? `left:${p.x - 85}px;top:${p.y - 85}px` : `left:${p.x - 48}px;top:${p.y - 36}px`; // disc (72 px, hero 170 px) centered on the point
+const at = (p, big) => big ? `left:${p.x - 75}px;top:${p.y - 75}px` : `left:${p.x - 48}px;top:${p.y - 32}px`; // disc (64 px, hero 150 px) centered on the point
 
 function homeHTML(){
   const tabs = [['apps','Apps'],['people','People']].map(([id, l]) =>
@@ -772,7 +772,7 @@ setInterval(tick, 250);
 const ACT = {
   tab(v){ P.tab = v; save(); render(); focusKey('tab-' + v); },
   cc(){ openCC(); },
-  app(v, b){ if(!V.app){ restore.apps = 'app-' + v; const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 36 }; }
+  app(v, b){ if(!V.app){ restore.apps = 'app-' + v; setOrigin(b); }
     open(v); },
   close(){ back(); },
   grab(){ moving = !moving; toast(moving ? 'Swipe to move · pinch to drop' : 'Window placed'); },
@@ -821,7 +821,8 @@ const ACT = {
   wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon); },
   resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
 };
-function setOrigin(b){ const r = b.getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + 36 }; }
+// windows zoom out of the icon's disc (works for the big center button too)
+function setOrigin(b){ const r = (b.querySelector('.disc') || b).getBoundingClientRect(), s = $('#stage').getBoundingClientRect(); ORIGIN = { x:r.left - s.left + r.width / 2, y:r.top - s.top + r.height / 2 }; }
 function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e) e.focus({ preventScroll:true }); }
 
 /* The glasses' pointer rests mid-screen, right over Notes. In 'keys' mode (swipes and pinches) a pointer-made
