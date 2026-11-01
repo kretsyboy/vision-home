@@ -423,7 +423,11 @@ function render(fresh){
   const sv = winEl.querySelector('.showvid'), svAt = sv && { i:sv.dataset.show, t:sv.currentTime }; // slideshow clip position
   put(winEl, V.app ? winHTML() : '');
   const nv = winEl.querySelector('.showvid'); // a redraw (e.g. Pause/Play) rebuilds the clip: keep it on the same frame
-  if(nv && svAt && nv !== sv && nv.dataset.show === svAt.i){ nv.currentTime = svAt.t; if(SHOW.paused) nv.pause(); }
+  if(nv && svAt && nv !== sv && nv.dataset.show === svAt.i){
+    nv.autoplay = false; nv.pause();
+    const seek = () => { nv.currentTime = svAt.t; if(!SHOW.paused) nv.play().catch(() => {}); };
+    if(nv.readyState >= 1) seek(); else nv.addEventListener('loadedmetadata', seek, { once:true });
+  }
   ccEl.classList.toggle('open', !!V.cc);
   put(ccEl, V.cc ? ccHTML() : '');
   winAnim = ccAnim = false;
@@ -830,8 +834,12 @@ const ACT = {
   btOpen(v){ const st = { app:'settings', arg:v }; history.pushState(st, ''); setView(st); },
   trainShow(){ SHOW.i = 0; SHOW.paused = false; const st = { app:'training', arg:'show' }; history.pushState(st, ''); setView(st); },
   showStep(v){ SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
-  showPlay(){ const vd = document.querySelector('.showvid'); SHOW.paused = !SHOW.paused;
-    if(vd){ if(SHOW.paused) vd.pause(); else vd.play().catch(() => {}); } },
+  showPlay(){ // works on the clip in place (no redraw), so it pauses and resumes on the exact frame
+    const vd = document.querySelector('.showvid'), b = document.querySelector('[data-k="sh-play"]'); SHOW.paused = !SHOW.paused;
+    if(vd){ if(SHOW.paused) vd.pause(); else vd.play().catch(() => {}); }
+    if(b) b.textContent = SHOW.paused ? 'Play' : 'Pause';
+    winEl._html = winHTML(); RENDERED = true; // the page now matches the new state: skip the click handler's redraw
+  },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; history.pushState(st, ''); setView(st); },
   trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; history.pushState(st, ''); setView(st); }, // back returns to the overview
   trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
