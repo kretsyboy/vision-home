@@ -6,7 +6,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons | Round icons, each in its own SiteVue brand color, spread in tone like a "Starry Night Sky" palette (periwinkle Clock, violet-mauve Clock In, pale-periwinkle Weather, blue-slate Compass, electric-indigo Training, sky-blue Tasks, violet-blue Notes, navy Calculator, lilac Tips, midnight-navy Settings) with white icon art, arranged in a circle: a larger **Clock In** in the center, with Clock, Weather, Compass, Training, Tasks, Notes, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons | Round icons, each in its own SiteVue brand color, spread in tone like a "Starry Night Sky" palette (periwinkle Clock, violet-mauve Clock In, blue-slate Compass, electric-indigo Training, sky-blue Tasks, violet-blue Notes, navy Calculator, lilac Tips, midnight-navy Settings) with white icon art, arranged as the SiteVue logo: a larger **Clock In** is the logo's ring, and Clock, Compass, Training, Tasks, Notes, Calculator, Tips and Settings sit on the ends and corners of its two hexagon brackets, drawn faintly behind them. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |
@@ -22,7 +22,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 ## Apps
 
-**Tasks** (a to-do list: add a task, pinch to check it off, done tasks drop to the bottom, clear completed with a double pinch; kept on the device) · **Clock In** (a shift time clock: clock in and out, breaks, live worked time, today and week totals, and a timesheet of past shifts; punches stay on the device) · **Training** (step-by-step work instructions for the lens, with a PPE check, a tools checklist, per-step timing, a cure countdown and a completion summary. The module lives in `sop.js`, an internal SOP that is kept off the public site; without it Training shows an empty state) · Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
+**Tasks** (a to-do list: add a task, pinch to check it off, done tasks drop to the bottom, clear completed with a double pinch; kept on the device) · **Clock In** (a shift time clock: clock in and out, breaks, live worked time, today and week totals, and a timesheet of past shifts; punches stay on the device) · **Training** (step-by-step work instructions for the lens, with a PPE check, a tools checklist, per-step timing, a cure countdown and a completion summary. The module lives in `sop.js`, an internal SOP that is kept off the public site; without it Training shows an empty state) · Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
 
 Settings, people, notes, the timer and the stopwatch are saved in the glasses' local storage.
 
@@ -44,7 +44,7 @@ On a laptop, use the arrow keys, Enter and Esc. Mouse hover acts as gaze, and cl
 1. **Host it over HTTPS.** Meta accepts only `https://` URLs. It's live on GitHub Pages at https://kretsyboy.github.io/vision-home/ (repo `kretsyboy/vision-home`). Pushing to `main` republishes it in about a minute.
 2. **Turn on Developer Mode.** In the Meta AI app, go to Settings → App Info, tap the version number 5 times, then tap Enable.
 3. **Add the app.** In the Meta AI app, go to Apps → Web Apps → Connect Web App, paste the URL and save. "SiteVue.AR Home" then appears in the glasses' app list.
-4. Weather and Compass ask for location and motion permission the first time you use them. To change a permission later, open the system menu → Permissions.
+4. Compass asks for motion permission the first time you use it. To change a permission later, open the system menu → Permissions.
 
 ## Platform limits it respects
 
