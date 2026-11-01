@@ -6,7 +6,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons | Round icons in SiteVue brand colors (navy, electric indigo, violet-blue and periwinkle) with white icon art, arranged in a circle: **Notes** in the center, with Clock, Weather, Compass, Training, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons | Round icons, each in its own color (orange Clock, pink Clock In, sky-blue Weather, red Compass, green Training, gold Notes, slate Calculator, purple Tips, indigo Settings) with white icon art, arranged in a circle: **Notes** in the center, with Clock, Weather, Compass, Training, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |
@@ -22,7 +22,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 ## Apps
 
-**Training** (step-by-step work instructions for the lens, with a PPE check, a tools checklist, per-step timing, a cure countdown and a completion summary. The module lives in `sop.js`, an internal SOP that is kept off the public site; without it Training shows an empty state) · Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
+**Clock In** (a shift time clock: clock in and out, breaks, live worked time, today and week totals, and a timesheet of past shifts; punches stay on the device) · **Training** (step-by-step work instructions for the lens, with a PPE check, a tools checklist, per-step timing, a cure countdown and a completion summary. The module lives in `sop.js`, an internal SOP that is kept off the public site; without it Training shows an empty state) · Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
 
 Settings, people, notes, the timer and the stopwatch are saved in the glasses' local storage.
 
