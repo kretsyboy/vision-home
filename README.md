@@ -66,3 +66,5 @@ The glasses have a small mobile chip and a 30 Hz display, so the app keeps conti
 - Brightness defaults to 100%, because below 100% the whole interface has to be blended over the moving video on every frame.
 - Highlight glows use small blur radii, and the intro uses 7 layers per piece.
 - **Reduce Motion** pauses the wallpaper and skips the 3D intro, for the lightest possible load.
+
+Click sound: "UI Click" by EminYILDIRIM (freesound.org, sound #536108), played on every pinch; checking off a task plays "Click" by florianreichelt (freesound.org, sound #683098) instead. Turn both off in Settings → Click sounds.

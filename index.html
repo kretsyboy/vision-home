@@ -298,7 +298,7 @@ const now = () => Date.now();
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
-const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, wall:.7, see:0, tab:'apps',
+const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, clicks:true, wall:.7, see:0, tab:'apps',
   people:[], notes:[], tasks:[], timer:{ dur:300000, end:null, left:null }, sw:{ start:null, acc:0, laps:[] }, units:'F', wx:null };
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
@@ -742,6 +742,7 @@ Object.assign(VIEWS, {
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         ${sliderHTML('see', 'Transparency', 'eye', P.see)}
+        <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-reset" data-act="resetAll"><b style="color:#ff8a84">${confirmKey === 'reset' ? 'Pinch again to erase everything' : 'Reset all data'}</b></button>
@@ -834,6 +835,7 @@ const ACT = {
   tile(v){
     if(v === 'dnd'){ P.dnd = !P.dnd; toast(P.dnd ? 'Do Not Disturb on' : 'Do Not Disturb off'); }
     if(v === 'reduce'){ P.reduce = !P.reduce; }
+    if(v === 'clicks'){ P.clicks = !P.clicks; if(P.clicks) playSound('click'); }
     if(v === 'recenter'){ $('#win').style.setProperty('--wx', '0px'); $('#win').style.setProperty('--wy', '0px'); P.tab = 'apps'; restore.apps = 'app-clock'; back(); toast('Recentered'); }
     if(v === 'settings' || v === 'tips') open(v);
     save(); apply();
@@ -910,6 +912,7 @@ document.addEventListener('click', e => {
   const b = target.closest('[data-act]'); if(!b) return;
   const act = b.dataset.act, before = confirmKey;
   if(!ACT[act]) return;
+  playSound(soundFor(act, b.dataset.v));
   RENDERED = false;
   ACT[act](b.dataset.v, b);
   if(confirmKey === before && !['rmPerson','noteDel','resetAll','trainReset','punchOut','tkClear'].includes(act)) confirmKey = null;
@@ -1011,6 +1014,21 @@ document.addEventListener('pointermove', e => {
 addEventListener('pointerup', () => { if(drag && document.activeElement && document.activeElement.dataset.slider) save(); drag = null; });
 addEventListener('pointercancel', () => drag = null);
 function updSlider(el){ const v = Math.round(SL[el.dataset.slider].get() * 100); el.querySelector('.track i').style.width = v + '%'; el.querySelector('.sl-v').textContent = v + '%'; }
+
+/* ---------- sounds ----------
+   click: every pinch (UI click by EminYILDIRIM, freesound.org #536108)
+   done:  a task gets its green check (click by florianreichelt, freesound.org #683098), in place of the click
+   Decoded once at load and played through Web Audio, so they start the instant a control is pinched. */
+let AC = null; const SND = {};
+try { AC = new (window.AudioContext || window.webkitAudioContext)();
+  for(const k of ['click', 'done']) fetch(k + '.wav').then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b)).then(buf => SND[k] = buf).catch(() => {}); } catch(e){}
+function playSound(k){
+  if(!P.clicks || !AC || !SND[k]) return;
+  try { if(AC.state === 'suspended') AC.resume();
+    const src = AC.createBufferSource(); src.buffer = SND[k]; src.connect(AC.destination); src.start(); } catch(e){}
+}
+// which sound a pinch makes: checking a task off is the "done" sound, everything else the click
+const soundFor = (act, v) => act === 'tkToggle' && (P.tasks.find(x => x.id === v) || {}).done === false ? 'done' : 'click';
 
 /* ---------- helpers for apps ---------- */
 function speak(text, force){
