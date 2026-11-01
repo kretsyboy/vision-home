@@ -31,7 +31,10 @@ button,textarea,input{font:inherit;color:inherit;background:none;border:0;paddin
   -webkit-tap-highlight-color:transparent}
 :focus{outline:none}
 svg{display:block}
-#stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000;border-radius:48px;isolation:isolate} /* rounded lens corners */
+#stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000;isolation:isolate}
+/* rounded lens corners: a static black frame drawn on top (black is see-through on the lens). Cheaper than a rounded clip,
+   which makes the GPU mask the video and every layer on each frame */
+#stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
 /* Transparency (--see) fades the whole app so the outside world shows through the lens; capped at 85% so it never vanishes */
@@ -226,7 +229,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 @property --dz{syntax:'<length>';inherits:true;initial-value:0px}
 #boot .logo,#boot .pcs{position:absolute;left:60px;top:266px;width:480px;height:68px;transform-style:preserve-3d}
 #boot .pcs{left:0;top:0}
-#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:0px}
+#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:3.6px} /* fixed thickness: only transform animates, so it stays on the GPU */
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 #boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .25s}
 #boot.lit .glow,#boot.lit .whole{opacity:1}
@@ -402,6 +405,7 @@ function render(fresh){
   homeEl.classList.toggle('behind', !!V.app);
   homeEl.classList.toggle('dimmed', !!V.cc);
   $('#wall').classList.toggle('under', !!(V.app || V.cc)); // keep windows readable over the video
+  wallPlay();
   winEl.classList.toggle('open', !!V.app);
   winEl.innerHTML = V.app ? winHTML() : '';
   ccEl.classList.toggle('open', !!V.cc);
@@ -1022,11 +1026,10 @@ function runIntro(){
   [...pcs.children].forEach((el, i) => {
     const x = rand(300), y = rand(250), z = -220 + Math.random() * 300, a = rand(70), b = rand(80), c = rand(120);
     el.animate([
-      { transform:T(x * 1.3, y * 1.3, z - 1600, a - 40, b - 40, c - 60, 2), '--dz':'3.6px', easing:'ease-out' }, // fly in from deep space
-      { transform:T(x, y, z, a, b, c, 2), '--dz':'3.6px', offset:.383, easing:'linear' },                        // float, thick
-      { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), '--dz':'3.6px', offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
-      { '--dz':'3.6px', offset:.9, easing:'ease-in' },                                                      // still thick on approach...
-      { transform:T(0, 0, 0, 0, 0, 0), '--dz':'0px' }                                                       // ...flat once locked in
+      { transform:T(x * 1.3, y * 1.3, z - 1600, a - 40, b - 40, c - 60, 2), easing:'ease-out' },                // fly in from deep space
+      { transform:T(x, y, z, a, b, c, 2), offset:.383, easing:'linear' },                                        // float, thick
+      { transform:T(x * .85, y * .85, z * .8, a * .8, b * .8, c * .8, 1.7), offset:.638, easing:'cubic-bezier(.2,1.18,.4,1)' }, // snap, with a slight overshoot
+      { transform:T(0, 0, 0, 0, 0, 0) }                                                                     // locked in face-on (the flat logo then replaces the pieces)
     ], { duration:INTRO_MS, delay:i * 38, fill:'both' });
   });
   const assembled = INTRO_MS + LOGO.length * 38 + 60, SWEEP_MS = 1900; // light crossing the logo (it grows meanwhile)
@@ -1049,9 +1052,15 @@ function apply(){
   r.setProperty('--accent', P.accent); r.setProperty('--ts', P.ts); r.setProperty('--bright', P.bright);
   document.body.classList.toggle('reduce', P.reduce);
   r.setProperty('--wall', P.wall); r.setProperty('--see', P.see);
-  const w = $('#wall'); // Reduce Motion freezes the wallpaper; 0% stops decoding entirely
+  const w = $('#wall');
   w.defaultPlaybackRate = w.playbackRate = WALL_SPEED;
-  if(P.reduce || P.wall <= 0) w.pause(); else w.play().catch(() => {});
+  wallPlay();
+}
+// the video only plays on Home: it freezes (dimmed) behind app windows and Control Center, under Reduce Motion, and at 0%.
+// Decoding it is the biggest steady cost on the glasses.
+function wallPlay(){
+  const w = $('#wall'); if(!w) return;
+  if(P.reduce || P.wall <= 0 || V.app || V.cc) w.pause(); else if(w.paused) w.play().catch(() => {});
 }
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
