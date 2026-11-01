@@ -6,7 +6,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons | Round icons, each in its own SiteVue brand color, spread in tone like a "Starry Night Sky" palette (periwinkle Clock, violet-mauve Clock In, pale-periwinkle Weather, blue-slate Compass, electric-indigo Training, sky-blue Tasks, violet-blue Notes, navy Calculator, lilac Tips, midnight-navy Settings) with white icon art, arranged evenly around a wheel: Clock, Clock In, Weather, Compass, Training, Tasks, Notes, Calculator, Tips and Settings, with the middle left clear. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons | Round icons, each in its own SiteVue brand color, spread in tone like a "Starry Night Sky" palette (periwinkle Clock, violet-mauve Clock In, pale-periwinkle Weather, blue-slate Compass, electric-indigo Training, sky-blue Tasks, violet-blue Notes, navy Calculator, lilac Tips, midnight-navy Settings) with white icon art, arranged in a circle: a larger **Clock In** in the center, with Clock, Weather, Compass, Training, Tasks, Notes, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |

@@ -67,6 +67,12 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .tab:focus .lbl{opacity:1;scale:1}
 .icon{position:absolute;width:96px;display:flex;flex-direction:column;align-items:center;gap:14px;border-radius:50%}
 .icon:focus{box-shadow:none}
+.icon.hero{width:170px}
+.icon.hero .disc{width:170px;height:170px}
+.icon.hero .fg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.icon.hero .fg svg{width:70px;height:70px}
+.icon.hero .fg b{font-size:1.2rem;font-weight:700;letter-spacing:.01em}
+.icon.hero:focus .disc{scale:1.03}
 .disc{position:relative;width:72px;height:72px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
 .disc .bg{position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 34% 24%,var(--c1),var(--c2) 78%)}
@@ -443,16 +449,15 @@ function honey(n, rows, y0 = 120, dy = 134){
   }
   return out;
 }
-/* wheel: every app evenly around the circle, starting at 12 o'clock (CENTER, if set, sits in the middle instead).
-   The middle stays empty, which also keeps the glasses' resting pointer off every icon. */
-const CENTER = null;
-// slightly oval (wider than tall): with ten icons this gives every name room above the next icon and clears the bars
-function ring(apps, cx = 340, cy = 282, rx = 210, ry = 172){
+/* wheel: CENTER sits in the middle, larger than the rest (the "hero"); the other apps go evenly around it from 12 o'clock */
+const CENTER = 'clockin';
+// a true circle (rx = ry); 188 px is the radius where every name clears the next icon, the big center button and the bars
+function ring(apps, cx = 340, cy = 280, rx = 188, ry = rx){
   const around = apps.filter(a => a.id !== CENTER), out = CENTER ? { [CENTER]:{ x:cx, y:cy } } : {};
   around.forEach((a, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / around.length; out[a.id] = { x:cx + rx * Math.cos(t), y:cy + ry * Math.sin(t) }; });
   return out;
 }
-const at = p => `left:${p.x - 48}px;top:${p.y - 36}px`; // disc (72 px) centered on the point
+const at = (p, big) => big ? `left:${p.x - 85}px;top:${p.y - 85}px` : `left:${p.x - 48}px;top:${p.y - 36}px`; // disc (72 px, hero 170 px) centered on the point
 
 function homeHTML(){
   const tabs = [['apps','Apps'],['people','People']].map(([id, l]) =>
@@ -473,8 +478,8 @@ function gridHTML(){
     return html + add + hint;
   }
   const pos = ring(APPS);
-  return APPS.map(a => `<button class="icon" style="${at(pos[a.id])}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === (CENTER || APPS[0].id) ? 'data-default' : ''} aria-label="${a.name}">
-      ${discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id))}<span class="nm">${a.name}</span></button>`).join('');
+  return APPS.map(a => `<button class="icon${a.id === CENTER ? ' hero' : ''}" style="${at(pos[a.id], a.id === CENTER)}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === (CENTER || APPS[0].id) ? 'data-default' : ''} aria-label="${a.name}">
+      ${a.id === CENTER ? discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id) + `<b>${a.name}</b>`) : discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id)) + `<span class="nm">${a.name}</span>`}</button>`).join('');
 }
 function statusHTML(){
   const d = new Date();
