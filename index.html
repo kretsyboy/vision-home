@@ -233,7 +233,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 /* each piece keeps its own 3D extrusion, but pieces never intersect: .pcs flattens them and paints back-to-front (see runIntro),
    with its own perspective so depth still reads */
 #boot .pcs{left:0;top:0;transform-style:flat;perspective:700px}
-#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:3.6px} /* fixed thickness: only transform animates, so it stays on the GPU */
+#boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:1.2px} /* fixed thickness: only transform animates, so it stays on the GPU */
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 #boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .45s var(--ease)}
 #boot .pcs{transition:opacity .45s var(--ease),visibility 0s .45s} /* crossfades into the flat logo, then stops drawing */
@@ -1075,7 +1075,9 @@ Object.assign(ACT, {
 function runIntro(){
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
-  const DEPTH = 6, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
+  // 18 thin slices 1.2 px apart (same 21.6 px depth as before) with a smooth color ramp, so the sides read as one solid
+  // object instead of visible steps
+  const DEPTH = 18, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
     const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
