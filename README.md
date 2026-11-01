@@ -6,11 +6,11 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 | Vision Pro | On the lens |
 |---|---|
-| Home View with round, layered app icons | Round icons in SiteVue brand colors (navy, electric indigo, violet-blue and periwinkle) with white icon art, arranged in a circle: **Notes** in the center, with Clock, Weather, Compass, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
+| Home View with round, layered app icons | Round icons in SiteVue brand colors (navy, electric indigo, violet-blue and periwinkle) with white icon art, arranged in a circle: **Notes** in the center, with Clock, Weather, Compass, Training, Calculator, Tips and Settings around it. Each icon has a gradient backplate, a specular highlight and a separate glyph layer. |
 | Look at something and it highlights | A **thumb swipe** moves the highlight. The icon lifts 12%, its glyph layer moves further than its backplate (parallax), and a colored halo appears. On a laptop, hovering the mouse acts as gaze. |
 | Pinch to tap | **Index pinch** (Enter) |
 | Tab bar on the left | Apps and People. The label expands out of the bar when a tab is highlighted. |
-| Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Do Not Disturb, Reduce Motion, Recenter, Settings and Tips. |
+| Chevron at the top opens Control Center | Swipe up to the chevron and pinch. Control Center has Brightness, Transparency, Do Not Disturb, Reduce Motion, Recenter, Settings and Tips, plus an **×** button underneath to close it (a middle pinch also closes it). |
 | Windows on glass, with a close button and window bar below | Each app opens in a glass window that springs out of its icon. Below the window are **×** and the window bar. Pinch the bar, then swipe or pinch-and-drag to move the window, and pinch again to drop it. |
 | People tab | The people you add, with their local time |
 | Startup | When the app opens, the 13 pieces of the SiteVue AI logo (each letter plus the mark's shapes) float and tumble in 3D over the wallpaper as thick, extruded blocks (7 stacked layers, about 2× size), then snap together into the logo, flattening as they lock in. A light sweeps slowly across it (1.5 s) while the logo grows about 8%, stopping when the light reaches the end. As the light moves onto each next letter, the letter behind it turns solid white, so the whole logo ends up white. The finished white logo stays on screen for 3 s before Home appears. Then Home pops in. It takes about 7.3 s, and a pinch or swipe skips it at any point. Pinch or swipe to skip. **Reduce Motion** shows the logo with a simple fade instead. The letter shapes come from the SiteVue logo artwork (`cms/static/sitevue-logo.svg`). |
@@ -22,7 +22,7 @@ This Meta Ray-Ban Display Web App recreates the Apple Vision Pro Home View on th
 
 ## Apps
 
-Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
+**Training** (step-by-step work instructions for the lens, with a PPE check, a tools checklist, per-step timing, a cure countdown and a completion summary. The module lives in `sop.js`, an internal SOP that is kept off the public site; without it Training shows an empty state) · Clock, with World / Timer / Stopwatch tabs like visionOS's Clock (the timer and stopwatch keep running in the status pill, and the timer announces "Timer done" aloud) · Weather (location from your phone + Open-Meteo, °F/°C) · Compass (the glasses' own motion sensors, so it points where your head points) · Notes (pinch the text box to dictate or type, then **Read** to hear it aloud) · Calculator · Tips · Settings (Bluetooth Devices, Transparency, accent color, including White, text size, brightness, wallpaper strength, reduce motion, Do Not Disturb, reset).
 
 Settings, people, notes, the timer and the stopwatch are saved in the glasses' local storage.
 

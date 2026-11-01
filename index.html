@@ -141,6 +141,21 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .dot2.ok{background:#30d158}
 .steps{margin:0;padding-left:1.4em;font-size:1.05rem;line-height:1.45}
 .steps li{margin:6px 0}
+.trk{display:flex;align-items:center;gap:10px;font-size:.85rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.trk .bar{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.trk .bar i{display:block;height:100%;background:var(--accent)}
+.sttl{font-size:1.45rem;font-weight:700;line-height:1.2}
+.sdet{font-size:1rem;line-height:1.4;color:var(--ink-2)}
+.call{border-radius:18px;padding:10px 14px;font-size:.92rem;line-height:1.35;background:rgba(255,214,10,.12);border:1px solid rgba(255,214,10,.45)}
+.call b{display:block;font-size:.78rem;letter-spacing:.08em;color:#ffd60a}
+.call.caution{background:rgba(255,99,90,.12);border-color:rgba(255,120,110,.5)}
+.call.caution b{color:#ff8a84}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:.8rem;font-weight:600;padding:4px 10px;border-radius:12px;background:rgba(255,255,255,.12)}
+.chk{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.45);flex:0 0 auto;display:grid;place-items:center}
+.chk.on{background:#30d158;border-color:#30d158}
+.chk svg{width:16px;height:16px;stroke-width:3}
+.grp{font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:8px 6px 0}
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;flex:1}
 
 /* app specifics */
@@ -199,6 +214,9 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   justify-content:center;gap:7px;font-size:.88rem;font-weight:600;text-align:center;line-height:1.1}
 .tile svg{width:28px;height:28px}
 .tile.on{background:rgba(255,255,255,.88);color:#000}
+.ccclose{align-self:center;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);flex:0 0 auto}
+.ccclose svg{width:24px;height:24px}
+.ccclose:focus{color:#fff}
 
 /* ---------- boot intro ---------- */
 #boot{position:absolute;inset:0;z-index:8;perspective:700px;overflow:hidden;transition:opacity .5s var(--ease),scale .6s var(--ease)}
@@ -259,6 +277,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   <div id="toast" role="status"></div>
 </div>
 <div id="help">Arrow keys = thumb swipe · Enter = index pinch · Esc = back (middle pinch) · mouse hover = gaze</div>
+<script src="sop.js"></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
@@ -290,6 +309,8 @@ const G = {
   glasses:'<circle cx="6.5" cy="13.5" r="3.6"/><circle cx="17.5" cy="13.5" r="3.6"/><path d="M10.1 13c1.2-.9 2.6-.9 3.8 0M2.9 13.5 2 9M21.1 13.5 22 9"/>',
   band:'<rect x="7" y="6.5" width="10" height="11" rx="3"/><path d="M9 6.5V3h6v3.5M9 17.5V21h6v-3.5"/>',
   bt:'<path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  training:'<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V2.8h6V4M8.5 13.2l2.4 2.4 4.6-4.8"/>',
   tips:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.2h5c0-.8.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
   settings:'<path d="M9.94 4.58L10.14 1.97L13.86 1.97L14.06 4.58A7.7 7.7 0 0 1 15.79 5.30L15.79 5.30L17.78 3.59L20.41 6.22L18.70 8.21A7.7 7.7 0 0 1 19.42 9.94L19.42 9.94L22.03 10.14L22.03 13.86L19.42 14.06A7.7 7.7 0 0 1 18.70 15.79L18.70 15.79L20.41 17.78L17.78 20.41L15.79 18.70A7.7 7.7 0 0 1 14.06 19.42L14.06 19.42L13.86 22.03L10.14 22.03L9.94 19.42A7.7 7.7 0 0 1 8.21 18.70L8.21 18.70L6.22 20.41L3.59 17.78L5.30 15.79A7.7 7.7 0 0 1 4.58 14.06L4.58 14.06L1.97 13.86L1.97 10.14L4.58 9.94A7.7 7.7 0 0 1 5.30 8.21L5.30 8.21L3.59 6.22L6.22 3.59L8.21 5.30A7.7 7.7 0 0 1 9.94 4.58Z"/><circle cx="12" cy="12" r="3.6"/>', // 8-tooth gear with an open center ring
   apps:'<circle cx="7" cy="7" r="2.7"/><circle cx="17" cy="7" r="2.7"/><circle cx="7" cy="17" r="2.7"/><circle cx="17" cy="17" r="2.7"/>',
@@ -314,6 +335,7 @@ const APPS = [
   { id:'clock', name:'Clock', bg:['#9eb7ff','#648bf4'] },
   { id:'weather', name:'Weather', bg:['#c3cdff','#92a0f8'] },
   { id:'compass', name:'Compass', bg:['#aba5ff','#776bf4'] },
+  { id:'training', name:'Training', bg:['#6aa0ff','#1d4fe0'] },
   { id:'notes', name:'Notes', bg:['#8b81ff','#5337f9'] },
   { id:'calc', name:'Calculator', bg:['#4c54b1','#1f2550'] },
   { id:'tips', name:'Tips', bg:['#6c60e4','#21168f'] },
@@ -364,6 +386,7 @@ function back(){ if(V.app || V.cc) history.back(); }
 addEventListener('popstate', e => setView(e.state || {}));
 function setView(st){
   const prev = V; V = st || {};
+  if(prev.app === 'training' && prev.arg === 'step' && !(V.app === 'training' && V.arg === 'step')) trainLeave();
   if(V.app && !VIEWS[V.app]) V = {}; // e.g. a history entry for a removed app
   if(V.app && !prev.app) winAnim = true;
   if(V.cc && !prev.cc) ccAnim = true;
@@ -390,7 +413,7 @@ function render(fresh){
   if(!el) el = scope.querySelector('[data-default]') || focusables(scope)[0];
   if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' }); }
 }
-const focusables = s => [...s.querySelectorAll('button,textarea,input,[tabindex="0"]')].filter(e => e.getClientRects().length);
+const focusables = s => [...s.querySelectorAll('button,textarea,input,[tabindex="0"]')].filter(e => !e.disabled && e.getClientRects().length);
 
 function discHTML(c1, c2, ink, inner, bgStyle){
   return `<span class="disc" style="--c1:${c1};--c2:${c2};color:${ink || '#fff'}"><span class="bg"${bgStyle ? ` style="background:${bgStyle}"` : ''}></span><span class="fg">${inner}</span></span>`;
@@ -470,7 +493,8 @@ function ccHTML(){
     <div class="tiles">
       ${tile('dnd', 'Do Not<br>Disturb', 'moon', P.dnd)}${tile('reduce', 'Reduce<br>Motion', 'motion', P.reduce)}${tile('recenter', 'Recenter', 'recenter')}
       ${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
-    </div></div>`;
+    </div>
+    <button class="ccclose glass" data-k="cc-close" data-act="close" aria-label="Close Control Center">${svg('x')}</button></div>`;
 }
 
 /* ---------- apps ---------- */
@@ -516,7 +540,59 @@ function stopwatchHTML(){
       <div class="row2"><button class="btn primary" data-k="swGo" data-act="swGo" data-default>${run ? 'Stop' : swElapsed() ? 'Resume' : 'Start'}</button>
         <button class="btn" data-k="swLap" data-act="swLap">${run ? 'Lap' : 'Reset'}</button></div>`;
   }
+/* ---------- Training: SOP work instructions ----------
+   The module itself lives in sop.js (an internal SOP, not published); without it Training shows an empty state. Each step has a short headline
+   for the lens plus the SOP's own detail, notes and cautions. Time on each step is recorded (cycle time). */
+const SOP = window.SOP || { title:'No training module', doc:'', ppe:[], tools:[], steps:[] };
+const TR = () => P.train || (P.train = { cur:0, done:{}, times:{}, ppe:{}, tools:{}, start:0, stepAt:0, cure:0 });
+const CURE_MS = 4 * 3600000;
+function trainLeave(){ const t = TR(); if(t.stepAt){ t.times[t.cur] = (t.times[t.cur] || 0) + now() - t.stepAt; t.stepAt = 0; save(); } }
+function trainGo(i){ const t = TR(); trainLeave(); t.cur = clamp(i, 0, SOP.steps.length - 1); t.stepAt = now(); if(!t.start) t.start = now(); save(); }
+const doneCount = () => Object.keys(TR().done).length;
+function cureText(){ const t = TR(); if(!t.cure) return ''; const left = t.cure + CURE_MS - now(); return left > 0 ? 'Handling strength in ' + fmtDur(left) : 'Handling strength reached ✓'; }
+const chk = on => `<span class="chk ${on ? 'on' : ''}">${on ? svg('check') : ''}</span>`;
+
 Object.assign(VIEWS, {
+  training(arg){
+    const t = TR(), n = SOP.steps.length, d = doneCount();
+    if(arg === 'ppe') return `<div class="eyebrow">Training · Safety</div><div class="title">PPE check</div>
+      <div class="sub" style="font-size:.92rem">Don’t start a step until its PPE is on.</div>
+      <div class="list">${SOP.ppe.map((x, i) => `<button class="lrow" data-k="ppe-${i}" data-act="trainTick" data-v="ppe:${i}" ${i ? '' : 'data-default'} style="justify-content:flex-start;gap:14px">${chk(t.ppe[i])}<span style="font-size:1rem">${x}</span></button>`).join('')}</div>`;
+    if(arg === 'tools'){ let k = 0;
+      return `<div class="eyebrow">Training · Tools</div><div class="title">Tools & supplies</div>
+      <div class="list">${SOP.tools.map(([g, items]) => `<div class="grp">${g}</div>` + items.map(x => { const id = k++; return `<button class="lrow" data-k="tool-${id}" data-act="trainTick" data-v="tools:${id}" ${id ? '' : 'data-default'} style="justify-content:flex-start;gap:14px;min-height:52px">${chk(t.tools[id])}<span style="font-size:1rem">${x}</span></button>`; }).join('')).join('')}</div>`; }
+    if(arg === 'done'){
+      const total = Object.values(t.times).reduce((a, b) => a + b, 0);
+      let slow = -1; for(const k in t.times) if(slow < 0 || t.times[k] > t.times[slow]) slow = +k;
+      return `<div class="eyebrow">Training complete</div><div class="center" style="gap:8px">${discHTML('#6aa0ff','#1d4fe0','#fff',svg('training'))}
+        <div class="title">Unit ready to ship</div><div class="sub">${d} of ${n} steps · total ${fmtDur(total)}</div>
+        ${slow >= 0 ? `<div class="sub" style="font-size:.92rem">Longest step: ${SOP.steps[slow][1]} (${fmtDur(t.times[slow])})</div>` : ''}</div>
+        <div class="row2"><button class="btn" data-k="tr-again" data-act="trainReset">${confirmKey === 'trreset' ? 'Pinch again' : 'Start over'}</button>
+        <button class="btn primary" data-k="tr-home" data-act="close" data-default>Done</button></div>`;
+    }
+    if(arg === 'step'){
+      const i = t.cur, [sec, head, det, call, ppe, cure] = SOP.steps[i];
+      return `<div class="trk"><span>${sec}</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
+        <div class="sttl">${t.done[i] ? '✓ ' : ''}${head}</div><div class="sdet">${det}</div>
+        ${ppe ? `<div class="chips">${ppe.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
+        ${call ? `<div class="call ${call[0] === 'CAUTION' ? 'caution' : ''}"><b>${call[0]}</b>${call[1]}</div>` : ''}
+        ${cure ? `<button class="lrow" data-k="tr-cure" data-act="trainCure" style="min-height:52px"><b>${t.cure ? 'Restart cure timer' : 'Start cure timer'}</b><span class="r" data-live="cure">${cureText() || '4:00:00'}</span></button>` : ''}
+        <div class="row2" style="margin-top:auto;flex:0 0 auto"><button class="btn" data-k="tr-prev" data-act="trainStep" data-v="-1" ${i ? '' : 'disabled style="opacity:.4"'}>◀ Back</button>
+          <button class="btn primary" data-k="tr-done" data-act="trainDone" data-default style="flex:1.6">${svg('check')}Done</button>
+          <button class="btn" data-k="tr-next" data-act="trainStep" data-v="1">Skip ▶</button></div>
+        <div class="sub" style="font-size:.85rem;text-align:center" data-live="trtime">On this step ${fmtDur(now() - (t.stepAt || now()))}</div>`;
+    }
+    if(!n) return `<div class="eyebrow">Training</div><div class="center" style="gap:10px"><div class="title">No training module loaded</div><div class="sub" style="max-width:420px">Work instructions are kept off the public site. Open SiteVue.AR Home from a computer that has the module to use Training.</div></div>`;
+    const started = d > 0 || t.start;
+    return `<div class="eyebrow">Training</div><div class="title">${SOP.title}</div><div class="sub" style="font-size:.92rem">${SOP.doc}</div>
+      <div class="trk" style="margin-top:6px"><span>${d} of ${n} steps</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span></div>
+      <div class="list" style="margin-top:4px">
+        <button class="lrow" data-k="tr-start" data-act="trainOpen" data-v="step" data-default style="background:var(--accent);color:#000"><b>${started ? 'Resume · step ' + (t.cur + 1) : 'Start training'}</b><span>›</span></button>
+        <button class="lrow" data-k="tr-ppe" data-act="trainOpen" data-v="ppe"><b>Safety & PPE</b><span class="r">${Object.values(t.ppe).filter(Boolean).length}/${SOP.ppe.length} ›</span></button>
+        <button class="lrow" data-k="tr-tools" data-act="trainOpen" data-v="tools"><b>Tools & supplies</b><span class="r">${Object.values(t.tools).filter(Boolean).length}/${SOP.tools.reduce((a, g) => a + g[1].length, 0)} ›</span></button>
+        ${started ? `<button class="lrow" data-k="tr-reset" data-act="trainReset"><b style="color:#ff8a84">${confirmKey === 'trreset' ? 'Pinch again to clear progress' : 'Reset progress'}</b></button>` : ''}
+      </div>`;
+  },
   compass(){
     if(!C.on) return `<div class="eyebrow">Compass</div><div class="center">${discHTML('#b1afff','#5856d6','#fff',svg('compass'))}
         <div class="title">Head compass</div><div class="sub" style="max-width:400px">Uses the glasses' motion sensors, so it points where you look.${C.err ? `<br><span style="color:#ff8a84">${h(C.err)}</span>` : ''}</div></div>
@@ -658,6 +734,7 @@ function tick(){
     const arc = q('timerArc'); if(arc) arc.setAttribute('stroke-dashoffset', (C2 * (1 - clamp(left / P.timer.dur, 0, 1))).toFixed(1));
   }
   if(V.app === 'clock' && V.arg === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
+  if(V.app === 'training' && V.arg === 'step'){ const t = TR(); set('trtime', 'On this step ' + fmtDur(now() - (t.stepAt || now()))); if(t.cure) set('cure', cureText()); }
   if(V.app === 'settings'){ set('st-glasses', stHTML(glassesState()), true); set('st-band', stHTML(bandState()), true); set('btSummary', btSummary() + ' ›'); }
   if(V.app === 'compass' && C.on && C.heading != null){
     const hd = Math.round(C.heading), dial = q('dial');
@@ -694,6 +771,17 @@ const ACT = {
   },
   clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; history.replaceState(st, ''); V = st; },
   btOpen(v){ const st = { app:'settings', arg:v }; history.pushState(st, ''); setView(st); },
+  trainOpen(v){ if(v === 'step') trainGo(TR().cur); sub(v); },
+  trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
+  trainStep(v){ trainGo(TR().cur + +v); },
+  trainDone(){
+    const t = TR(); t.done[t.cur] = true;
+    if(doneCount() >= SOP.steps.length || t.cur === SOP.steps.length - 1){ trainLeave(); history.replaceState({ app:'training', arg:'done' }, ''); setView({ app:'training', arg:'done' }); speak('Training complete'); return; }
+    let nx = t.cur + 1; while(nx < SOP.steps.length && t.done[nx]) nx++;
+    trainGo(nx < SOP.steps.length ? nx : t.cur + 1);
+  },
+  trainCure(){ TR().cure = now(); save(); toast('Cure timer started · 4 h to handling strength'); },
+  trainReset(){ if(confirmKey !== 'trreset'){ confirmKey = 'trreset'; return; } P.train = null; save(); toast('Training progress cleared'); if(V.arg) history.back(); },
   timerSet(v){ P.timer.dur = v * 60000; P.timer.left = null; save(); },
   timerGo(){ const t = P.timer;
     if(t.end){ t.left = t.end - now(); t.end = null; } else { t.end = now() + timerLeft(); t.left = null; }
@@ -739,7 +827,7 @@ document.addEventListener('click', e => {
   const act = b.dataset.act, before = confirmKey;
   if(!ACT[act]) return;
   ACT[act](b.dataset.v, b);
-  if(confirmKey === before && !['rmPerson','noteDel','resetAll'].includes(act)) confirmKey = null;
+  if(confirmKey === before && !['rmPerson','noteDel','resetAll','trainReset'].includes(act)) confirmKey = null;
   render();
 });
 document.addEventListener('input', e => {
