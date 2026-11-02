@@ -441,6 +441,7 @@ function render(fresh){
   winEl.classList.toggle('open', !!V.app);
   const sv = winEl.querySelector('.showvid'), svAt = sv && { i:sv.dataset.show, t:sv.currentTime }; // slideshow clip position
   put(winEl, V.app ? winHTML() : '');
+  startVideos(winEl);
   if(!V.app) LASTWIN = '';
   const nv = winEl.querySelector('.showvid'); // a redraw (e.g. Pause/Play) rebuilds the clip: keep it on the same frame
   if(nv && svAt && nv !== sv && nv.dataset.show === svAt.i){
@@ -1065,7 +1066,7 @@ document.addEventListener('pointermove', e => {
       if(MOUSE_RUN > 40 && MOUSE_OK()) INPUT = 'mouse';
       MOUSE_AT = { x:e.clientX, y:e.clientY }; MOUSE_T = tm;
     }
-    if(e.pointerType === 'mouse' && INPUT === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
+    if(e.pointerType === 'mouse' && INPUT === 'mouse' && e.target.closest){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
       if(t && t !== document.activeElement && scope.contains(t)){ INPUT_GEN++; t.focus({ preventScroll:true }); } }
     return;
   }
@@ -1328,9 +1329,31 @@ function apply(){
 }
 // the video only plays on Home: it freezes (dimmed) behind app windows and Control Center, under Reduce Motion, and at 0%.
 // Decoding it is the biggest steady cost on the glasses.
+// While a Training animation is on screen, the wallpaper lets go of its video entirely (its still poster stays behind):
+// small wearable chips often have one hardware video decoder, and a paused wallpaper still holds it.
+let WALL_T = 0;
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
+  const freeDecoder = V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
+  if(freeDecoder){
+    if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
+    return;
+  }
+  if(!w.getAttribute('src')){
+    w.src = 'wallpaper.mp4';
+    w.addEventListener('loadedmetadata', () => { try { w.currentTime = WALL_T % (w.duration || 1); } catch(e){} }, { once:true });
+  }
   if(P.reduce || P.wall <= 0 || V.app || V.cc) w.pause(); else if(w.paused) w.play().catch(() => {});
+}
+// make every animation in a window really start: set muted/inline as properties (some built-in browsers ignore the
+// attributes on video added by code) and ask it to play now and again once it can
+function startVideos(root){
+  for(const v of root.querySelectorAll('video')){
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.setAttribute('playsinline', '');
+    if(!v.autoplay) continue;
+    const go = () => { if(v.isConnected && v.paused && !v.ended && !(v.classList.contains('showvid') && SHOW.paused)) v.play().catch(() => {}); };
+    go(); v.addEventListener('loadeddata', go, { once:true }); v.addEventListener('canplay', go, { once:true });
+  }
 }
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
