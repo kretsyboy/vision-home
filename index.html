@@ -390,7 +390,7 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
   { id:'settings', name:'Settings', bg:['#4a56b8','#161b4a'] }, // midnight navy
 ];
 const appBg = id => APPS.find(a => a.id === id).bg;
-const CITY_LL = { 'New York':[40.71,-74.01], 'Chicago':[41.88,-87.63], 'Denver':[39.74,-104.99], 'Phoenix':[33.45,-112.07],
+const CITY_LL = { 'Franklin, TN':[35.925,-86.869], 'New York':[40.71,-74.01], 'Chicago':[41.88,-87.63], 'Denver':[39.74,-104.99], 'Phoenix':[33.45,-112.07],
   'Los Angeles':[34.05,-118.24], 'Anchorage':[61.22,-149.9], 'Honolulu':[21.31,-157.86], 'Toronto':[43.65,-79.38], 'Mexico City':[19.43,-99.13],
   'São Paulo':[-23.55,-46.63], 'London':[51.51,-0.13], 'Paris':[48.86,2.35], 'Berlin':[52.52,13.4], 'Dubai':[25.2,55.27], 'Mumbai':[19.08,72.88],
   'Singapore':[1.35,103.82], 'Tokyo':[35.68,139.69], 'Seoul':[37.57,126.98], 'Sydney':[-33.87,151.21] };
@@ -399,7 +399,7 @@ const CITIES = [
   ['Los Angeles','America/Los_Angeles'],['Anchorage','America/Anchorage'],['Honolulu','Pacific/Honolulu'],['Toronto','America/Toronto'],
   ['Mexico City','America/Mexico_City'],['São Paulo','America/Sao_Paulo'],['London','Europe/London'],['Paris','Europe/Paris'],
   ['Berlin','Europe/Berlin'],['Dubai','Asia/Dubai'],['Mumbai','Asia/Kolkata'],['Singapore','Asia/Singapore'],
-  ['Tokyo','Asia/Tokyo'],['Seoul','Asia/Seoul'],['Sydney','Australia/Sydney'],
+  ['Tokyo','Asia/Tokyo'],['Seoul','Asia/Seoul'],['Sydney','Australia/Sydney'],['Franklin, TN','America/Chicago'],
 ];
 const WORLD = [['London','Europe/London'],['Tokyo','Asia/Tokyo'],['New York','America/New_York'],['Sydney','Australia/Sydney']];
 const ACCENTS = [['White','#ffffff'],['Blue','#64d2ff'],['Mint','#63e6be'],['Amber','#ffc53d'],['Pink','#ff7eb6'],['Violet','#b49cff']];
@@ -974,7 +974,7 @@ const ACT = {
   wxLoc(){ getWeather(); },
   wxUnits(){ P.units = P.units === 'F' ? 'C' : 'F'; save(); if(P.wx) fetchWx(P.wx.lat, P.wx.lon, P.wx.place); },
   wxRefresh(){ if(P.wx && P.wx.place) fetchWx(P.wx.lat, P.wx.lon, P.wx.place); else getWeather(); },
-  wxPick(){ const k = P.wx && P.wx.place ? CITIES.findIndex(c => c[0] === P.wx.place) : -1; W.city = k >= 0 ? k : 0; sub('city'); },
+  wxPick(){ const k = P.wx && P.wx.place ? CITIES.findIndex(c => c[0] === P.wx.place) : -1; W.city = k >= 0 ? k : CITIES.findIndex(c => c[0] === 'Franklin, TN'); sub('city'); },
   wxCity(){ const [city] = CITIES[W.city], [lat, lon] = CITY_LL[city]; W.err = ''; history.back(); fetchWx(lat, lon, city); },
   resetAll(){ if(confirmKey !== 'reset'){ confirmKey = 'reset'; return; } try { localStorage.removeItem(KEY); } catch(e){} location.reload(); },
 };
