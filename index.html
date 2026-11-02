@@ -426,9 +426,9 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
 ];
 // App colors (Settings): 'chief' = the Master Chief palette, 'match' = from the wallpaper photo, 'brand' = SiteVue
 const PALETTES = {
-  chief:{ // Spartan armor greens and visor oranges, with gunmetal and steel; vivid so they read as green and orange on the lens, not brown
-    clockin:['#8fd14f','#3f8a1f'], clock:['#ffb347','#e0640f'], weather:['#b4e36e','#5f9e2a'], training:['#ffcf5c','#d98a0d'],
-    tasks:['#6fc24a','#2f6e1c'], notes:['#ff9a4d','#c94f12'], calc:['#a0a8b2','#4a525c'], tips:['#c6ef8a','#73b032'], settings:['#ffbf73','#e07a1f'] },
+  chief:{ // sampled from your Halo palette (Halo 2, 3, 4, 5 and Infinite armor and visor colors)
+    clockin:['#b9c58e','#85944f'], clock:['#f8d538','#b5960b'], weather:['#c1bfa4','#908d64'], training:['#daa358','#9c6a26'],
+    tasks:['#909d77','#565e45'], notes:['#ca9f7c','#966640'], calc:['#a5a79a','#6d6f62'], tips:['#f4a71f','#98650b'], settings:['#b68f59','#6d5432'] },
 };
 const appColors = () => P.appColors || 'chief';
 const appBg = id => { const m = appColors(), pal = PALETTES[m];
@@ -1859,7 +1859,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-02-01';
+const APP_BUILD = '2026-11-02-02';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
