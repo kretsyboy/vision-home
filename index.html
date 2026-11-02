@@ -280,7 +280,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 </head>
 <body>
 <div id="stage">
-  <video id="wall" src="wallpaper.mp4" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
+  <video id="wall" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
   <div id="ui">
     <div id="home"></div>
     <div id="win" role="dialog"></div>
@@ -790,6 +790,7 @@ Object.assign(VIEWS, {
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         ${sliderHTML('see', 'Transparency', 'eye', P.see)}
+        <button class="lrow" data-k="s-wallmove" data-act="tile" data-v="wallmove"><b>Moving wallpaper</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">${isLens() ? 'off is smoother' : ''}</span><span class="tog ${wallMoves() ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce Motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
@@ -883,6 +884,7 @@ const ACT = {
   tile(v){
     if(v === 'dnd'){ P.dnd = !P.dnd; toast(P.dnd ? 'Do Not Disturb on' : 'Do Not Disturb off'); }
     if(v === 'reduce'){ P.reduce = !P.reduce; }
+    if(v === 'wallmove'){ P.wallMove = !wallMoves(); }
     if(v === 'clicks'){ P.clicks = !P.clicks; if(P.clicks) playSound('click'); }
     if(v === 'recenter'){ $('#win').style.setProperty('--wx', '0px'); $('#win').style.setProperty('--wy', '0px'); P.tab = 'apps'; restore.apps = 'app-clock'; back(); toast('Recentered'); }
     if(v === 'settings' || v === 'tips') open(v);
@@ -1332,9 +1334,13 @@ function apply(){
 // While a Training animation is on screen, the wallpaper lets go of its video entirely (its still poster stays behind):
 // small wearable chips often have one hardware video decoder, and a paused wallpaper still holds it.
 let WALL_T = 0;
+// On the lens the wallpaper is a still picture by default: decoding video costs the glasses CPU, battery and their
+// only video decoder. Settings → Moving wallpaper turns it back on. (Lens = a 600 x 600 viewport that isn't the Mac app.)
+const isLens = () => innerWidth <= 600 && innerHeight <= 600 && !(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.svLocation);
+const wallMoves = () => P.wallMove != null ? P.wallMove : !isLens();
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
-  const freeDecoder = V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
+  const freeDecoder = !wallMoves() || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
   if(freeDecoder){
     if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
     return;
