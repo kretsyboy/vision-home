@@ -424,7 +424,15 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
   { id:'tips', name:'Tips', bg:['#d0caff','#9a8cf0'] },         // lilac
   { id:'settings', name:'Settings', bg:['#4a56b8','#161b4a'] }, // midnight navy
 ];
-const appBg = id => (THEME && THEME[id]) || APPS.find(a => a.id === id).bg; // a photo wallpaper re-colors the apps
+// App colors (Settings): 'chief' = the Master Chief palette, 'match' = from the wallpaper photo, 'brand' = SiteVue
+const PALETTES = {
+  chief:{ // Spartan armor greens, visor gold and bronze, gunmetal, steel and the black undersuit
+    clockin:['#93a663','#4b5b32'], clock:['#f2cf6e','#b8862e'], weather:['#a8b56f','#5f7342'], training:['#9aa1aa','#4a5058'],
+    tasks:['#e9b26a','#9a5f22'], notes:['#7e9358','#2f3a22'], calc:['#6c7078','#26282c'], tips:['#cdc68e','#77723f'], settings:['#b7bcc3','#666c75'] },
+};
+const appColors = () => P.appColors || 'chief';
+const appBg = id => { const m = appColors(), pal = PALETTES[m];
+  return (pal && pal[id]) || (m === 'match' && THEME && THEME[id]) || APPS.find(a => a.id === id).bg; };
 const CITY_LL = { 'Franklin, TN':[35.925,-86.869], 'New York':[40.71,-74.01], 'Chicago':[41.88,-87.63], 'Denver':[39.74,-104.99], 'Phoenix':[33.45,-112.07],
   'Los Angeles':[34.05,-118.24], 'Anchorage':[61.22,-149.9], 'Honolulu':[21.31,-157.86], 'Toronto':[43.65,-79.38], 'Mexico City':[19.43,-99.13],
   'São Paulo':[-23.55,-46.63], 'London':[51.51,-0.13], 'Paris':[48.86,2.35], 'Berlin':[52.52,13.4], 'Dubai':[25.2,55.27], 'Mumbai':[19.08,72.88],
@@ -886,6 +894,7 @@ Object.assign(VIEWS, {
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         <button class="lrow" data-k="s-see" data-act="tile" data-v="see"><b>Transparency</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">hides the background</span><span class="tog ${P.see ? 'on' : ''}"></span></span></button>
+        <button class="lrow" data-k="s-colors" data-spin="colors"><b>App colors</b><span class="r">◀ ${({ chief:'Master Chief', match:'Match wallpaper', brand:'SiteVue' })[appColors()]} ▶</span></button>
         <button class="lrow" data-k="s-photo" data-act="btOpen" data-v="photo"><b>Wallpaper photo</b><span class="r">${wallPhoto() ? 'Your photo' : 'SiteVue'} ›</span></button>
         <button class="lrow" data-k="s-wallmove" data-act="tile" data-v="wallmove"><b>Animated Background</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">${isLens() ? 'off is smoother' : ''}</span><span class="tog ${wallMoves() ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
@@ -1140,6 +1149,7 @@ const SPIN = {
   // any duration you like: hours (0-23), minutes and seconds (0-59, wrapping), never below 1 second
   th:d => timerPart(3600000, 24, d), tm:d => timerPart(60000, 60, d), ts:d => timerPart(1000, 60, d),
   city:d => { D.city = (D.city + d + CITIES.length) % CITIES.length; },
+  colors:d => { const o = ['chief', 'match', 'brand'], i = o.indexOf(appColors()); P.appColors = o[(i + d + o.length) % o.length]; },
   wxcity:d => { W.city = (W.city + d + CITIES.length) % CITIES.length; },
   accent:d => { const i = ACCENTS.findIndex(a => a[1] === P.accent); P.accent = ACCENTS[(i + d + ACCENTS.length) % ACCENTS.length][1]; },
   ts:d => { const i = TEXT.findIndex(t => t[1] === P.ts); P.ts = TEXT[clamp(i + d, 0, TEXT.length - 1)][1]; },
