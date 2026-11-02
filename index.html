@@ -484,8 +484,9 @@ function honey(n, rows, y0 = 120, dy = 134){
 }
 /* wheel: CENTER sits in the middle, larger than the rest (the "hero"); the other apps go evenly around it from 12 o'clock */
 const CENTER = 'clockin';
-// a true circle (rx = ry); 188 px is the radius where every name clears the next icon, the big center button and the bars
-function ring(apps, cx = 340, cy = 280, rx = 188, ry = rx){
+// a true circle centered on the screen's middle line (the same line as the top chevron and the status bar), so the
+// whole Home screen is mirror-symmetric; 162 px keeps every name clear of its neighbors, the tab bar and the bars
+function ring(apps, cx = 300, cy = 282, rx = 162, ry = rx){
   const around = apps.filter(a => a.id !== CENTER), out = CENTER ? { [CENTER]:{ x:cx, y:cy } } : {};
   around.forEach((a, i) => { const t = -Math.PI / 2 + i * 2 * Math.PI / around.length; out[a.id] = { x:cx + rx * Math.cos(t), y:cy + ry * Math.sin(t) }; });
   return out;
@@ -526,8 +527,8 @@ function gridHTML(){
     const hint = list.length ? '' : `<div class="empty sub" style="top:${pos[0].y + 90}px">Add the people you keep in touch with to see their local time at a glance.</div>`;
     return html + add + hint;
   }
-  const pos = logoLayout(APPS);
-  return markBgHTML() + APPS.map(a => `<button class="icon${a.id === CENTER ? ' hero' : ''}" style="${at(pos[a.id], a.id === CENTER)}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === (CENTER || APPS[0].id) ? 'data-default' : ''} aria-label="${a.name}">
+  const pos = ring(APPS); // a true circle, evenly spaced from 12 o'clock, Clock In in the middle
+  return APPS.map(a => `<button class="icon${a.id === CENTER ? ' hero' : ''}" style="${at(pos[a.id], a.id === CENTER)}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === (CENTER || APPS[0].id) ? 'data-default' : ''} aria-label="${a.name}">
       ${a.id === CENTER ? discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id) + `<b>${a.name}</b>`) : discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id)) + `<span class="nm">${a.name}</span>`}</button>`).join('');
 }
 function statusHTML(){
