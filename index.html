@@ -154,6 +154,10 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .2s var(--spring)}
 .tog.on{background:#30d158}
 .tog.on::after{left:23px}
+.hms{display:flex;gap:8px}
+.hms .spin{flex:1;min-height:56px;padding:0 12px;font-size:1.05rem;border-radius:28px}
+.hms .spin b{font-size:1.3rem}
+.hms .spin small{color:var(--ink-2);font-size:.85rem}
 .spin{display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:0 20px;border-radius:31px;
   background:var(--glass-2);font-size:1.2rem;font-weight:600;width:100%}
 .spin .ar{color:var(--ink-3);font-size:1.1rem}
@@ -635,7 +639,8 @@ function timerHTML(){
           stroke-dasharray="${C2.toFixed(1)}" stroke-dashoffset="${(C2 * (1 - frac)).toFixed(1)}"/></svg>
         <div class="rt"><div><span data-live="timerLeft">${fmtDur(left)}</span><small>${run ? 'Running' : paused ? 'Paused' : 'of ' + fmtDur(P.timer.dur)}</small></div></div></div>
       ${run || paused ? '' : `<div class="presets">${presets}</div>
-        <button class="spin" data-k="spin-timer" data-spin="timer"><span class="ar">◀</span>${fmtDur(P.timer.dur)}<span class="ar">▶</span></button>`}
+        <div class="hms">${[['th','hr',Math.floor(P.timer.dur / 3600000)],['tm','min',Math.floor(P.timer.dur / 60000) % 60],['ts','sec',Math.floor(P.timer.dur / 1000) % 60]].map(([k, u, v]) =>
+          `<button class="spin" data-k="spin-${k}" data-spin="${k}" aria-label="${u}"><span class="ar">◀</span><span><b>${v}</b> <small>${u}</small></span><span class="ar">▶</span></button>`).join('')}</div>`}
       <div class="row2" style="margin-top:auto"><button class="btn primary" data-k="timerGo" data-act="timerGo" data-default>${run ? 'Pause' : paused ? 'Resume' : 'Start'}</button>
         <button class="btn" data-k="timerReset" data-act="timerReset">Reset</button></div>`;
 }
@@ -1060,11 +1065,17 @@ const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v }, wall:
 function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100, s.min, s.max || 1)); save(); apply(); render(); }
 const SPIN = {
   timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
+  // any duration you like: hours (0-23), minutes and seconds (0-59, wrapping), never below 1 second
+  th:d => timerPart(3600000, 24, d), tm:d => timerPart(60000, 60, d), ts:d => timerPart(1000, 60, d),
   city:d => { D.city = (D.city + d + CITIES.length) % CITIES.length; },
   wxcity:d => { W.city = (W.city + d + CITIES.length) % CITIES.length; },
   accent:d => { const i = ACCENTS.findIndex(a => a[1] === P.accent); P.accent = ACCENTS[(i + d + ACCENTS.length) % ACCENTS.length][1]; },
   ts:d => { const i = TEXT.findIndex(t => t[1] === P.ts); P.ts = TEXT[clamp(i + d, 0, TEXT.length - 1)][1]; },
 };
+function timerPart(unit, n, d){
+  const t = P.timer, cur = Math.floor(t.dur / unit) % n, next = (cur + d + n) % n;
+  t.dur = Math.max(1000, t.dur + (next - cur) * unit); t.left = null;
+}
 function spin(k, d){ SPIN[k](d); save(); apply(); render(); }
 
 /* ---------- Neural Band / touchpad: the OS sends arrow keys + Enter; Back calls history.back() ---------- */
