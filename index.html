@@ -1769,10 +1769,10 @@ function setupPhotoSend(){
 }
 
 /* ---------- app colors from the wallpaper ----------
-   With the SiteVue wallpaper the apps keep the brand colors above. With your own photo, its main colors are found
-   (k-means on a 48 x 48 copy), and each app gets one as a light-to-deep gradient: the most common color goes to
-   Clock In, the rest around the wheel, varying lightness when the photo has only a few colors (a black, gray and red
-   Darth Vader gives reds, grays and charcoals). Every color is kept bright enough to show on the lens (pure black is
+   With the SiteVue wallpaper the apps keep the brand colors above. With your own photo, every distinct color in it is
+   found (on a 64 x 64 copy) and each app gets a different one as a light-to-deep gradient: the most common to Clock In,
+   the rest flowing around the wheel by hue, covering the whole photo, small accents included (Master Chief: armor
+   greens, visor gold, grays, black). A photo with only a few colors repeats them in lighter and darker shades. Every color is kept bright enough to show on the lens (pure black is
    see-through there) and dark enough for the white icon art. */
 const THEME_KEY = 'sitevue-ar-wallphoto-theme';
 let THEME = null; // { id: [light, deep] } for a photo, or null for the brand colors
@@ -1787,29 +1787,40 @@ function photoTheme(dataURL){
   return new Promise(ok => {
     const img = new Image();
     img.onload = () => {
-      const c = document.createElement('canvas'); c.width = c.height = 48; const g = c.getContext('2d'); g.drawImage(img, 0, 0, 48, 48);
-      const d = g.getImageData(0, 0, 48, 48).data, px = [];
+      const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.drawImage(img, 0, 0, 64, 64);
+      const d = g.getImageData(0, 0, 64, 64).data, px = [];
       for(let i = 0; i < d.length; i += 4) px.push([d[i], d[i + 1], d[i + 2]]);
-      // k-means, 6 colors, seeded across the brightness range
-      const sorted = px.slice().sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
-      let cs = Array.from({ length:6 }, (_, k) => sorted[Math.floor((k + .5) / 6 * sorted.length)].slice());
+      // find every distinct color: k-means seeded by farthest points (so a small gold visor or a red light gets its own
+      // seed instead of being swallowed by big areas), with a perceptual color distance
+      const dist = (a, b) => { const r = (a[0] + b[0]) / 2, dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+        return Math.sqrt((2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db); };
+      let cs = [px[px.length >> 1].slice()];
+      while(cs.length < 16){ let best = null, bd = -1;
+        for(const p of px){ let m = Infinity; for(const q of cs){ const dd = dist(p, q); if(dd < m) m = dd; } if(m > bd){ bd = m; best = p; } }
+        if(bd < 20) break; cs.push(best.slice()); }
       let groups = [];
-      for(let it = 0; it < 10; it++){
+      for(let it = 0; it < 8; it++){
         groups = cs.map(() => []);
-        for(const p of px){ let bi = 0, bd = Infinity; cs.forEach((q, k) => { const dd = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2; if(dd < bd){ bd = dd; bi = k; } }); groups[bi].push(p); }
+        for(const p of px){ let bi = 0, bd = Infinity; cs.forEach((q, k) => { const dd = dist(p, q); if(dd < bd){ bd = dd; bi = k; } }); groups[bi].push(p); }
         cs = groups.map((gr, k) => gr.length ? [0, 1, 2].map(j => gr.reduce((a, p) => a + p[j], 0) / gr.length) : cs[k]);
       }
-      // most common first; vivid colors get a boost so a red accent isn't lost among large gray areas
-      const ranked = cs.map((q, k) => { const [h, s, l] = rgb2hsl(...q); return { h, s, l, w:groups[k].length * (1 + s / 60) }; })
-        .filter(x => x.w > 0).sort((a, b) => b.w - a.w);
+      const found = cs.map((q, k) => ({ q, n:groups[k].length })).filter(c => c.n >= px.length * .003).sort((a, b) => b.n - a.n); // small accents count too
+      // keep the colors that differ most from each other, up to one per app: the most common one first (Clock In)
+      const sel = [found[0]];
+      while(sel.length < APPS.length){ let best = null, bd = -1;
+        for(const c of found){ if(sel.includes(c)) continue; const m = Math.min(...sel.map(x => dist(c.q, x.q))); if(m > bd){ bd = m; best = c; } }
+        if(!best || bd < 24) break; sel.push(best); }
+      const tone = c => { const [h, s, l] = rgb2hsl(...c.q); return { h, s, l }; };
+      // around the wheel the colors flow by hue (grays last, dark to light), so neighbors blend like the photo does
+      const ring = sel.slice(1).map(tone).sort((a, b) => (a.s < 12) - (b.s < 12) || (a.s < 12 ? a.l - b.l : a.h - b.h));
+      const pool = [tone(sel[0]), ...ring];
       const order = [CENTER, ...APPS.map(a => a.id).filter(id => id !== CENTER)], out = {};
-      const used = [];
-      const shifts = [0, 10, -8, 18, -14, 6, 24, -4, 14]; // lightness variety when colors repeat
+      const used = [], shifts = [0, 10, -8, 18, -14, 6, 24, -4, 14];
       order.forEach((id, i) => {
-        const b = ranked[i % ranked.length], round = Math.floor(i / ranked.length);
+        // fewer colors than apps (a simple photo): reuse them in lighter and darker shades
+        const b = pool[i] || pool[1 + (i - 1) % Math.max(1, pool.length - 1)] || pool[0], again = i >= pool.length;
         const s = Math.min(b.s, 85) * (b.s < 12 ? 1 : .95);
-        let deep = clamp(b.l * .7 + shifts[i] * (round ? 1 : .4), 22, 46);   // visible on the lens, dark enough for white art
-        // two apps never share a color: a repeat steps brighter (or darker at the top of the range)
+        let deep = clamp(b.l * .7 + (again ? shifts[i] : 0), 22, 46);   // visible on the lens, dark enough for white art
         for(let tries = 0; tries < 6 && used.some(u => Math.abs(u[0] - b.h) < 12 && Math.abs(u[1] - deep) < 5); tries++) deep = deep + 7 > 46 ? deep - 13 : deep + 7;
         deep = clamp(deep, 22, 46); used.push([b.h, deep]);
         const light = clamp(deep + 26, 48, 80);
