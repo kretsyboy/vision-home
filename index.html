@@ -17,7 +17,7 @@
   --accent:#64d2ff; --ts:1; --bright:1;
   --glass-a:rgba(255,255,255,.12); --glass-b:rgba(255,255,255,.055); --glass-2:rgba(255,255,255,.14);
   --edge:rgba(255,255,255,.16); --ink:#fff; --ink-2:rgba(255,255,255,.68); --ink-3:rgba(255,255,255,.44);
-  --halo:0 0 0 3px rgba(255,255,255,.92),0 0 10px rgba(255,255,255,.3);
+  --halo:0 0 0 2px rgba(255,255,255,.95),0 0 16px rgba(255,255,255,.22);
   --spring:cubic-bezier(.2,.9,.25,1.12); --ease:cubic-bezier(.25,.8,.25,1);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
@@ -27,6 +27,18 @@ html,body{margin:0;height:100%;background:#000;color:var(--ink);font-family:var(
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
 /* touch-action:none opts in to Neural Band pinch-and-drag (pointer events); read once at load */
 body{touch-action:none;display:grid;place-items:center;min-width:600px;min-height:600px}
+/* every control eases its highlight in and out, and briefly presses in when pinched (.tap) */
+.lrow,.btn,.tile,.spin,.slider,.seg button,.tab,#ccBtn,.winbar .close,.ccclose{transition:background-color .16s var(--ease),box-shadow .16s var(--ease),color .16s}
+.lrow:focus,.spin:focus,.slider:focus,.tile:not(.on):focus,.btn:not(.primary):focus{background:rgba(255,255,255,.17)}
+.tap{animation:tap .32s var(--spring)}
+.icon.tap{animation:none}.icon.tap .disc{animation:tap .32s var(--spring)}
+@keyframes tap{0%{transform:scale(.93)}100%{transform:scale(1)}}
+/* moving between screens inside a window: the new screen fades up into place */
+.window.swap>*{animation:swapIn .26s var(--ease) both}
+@keyframes swapIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid rgba(255,255,255,.16);border-top-color:#fff;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.reduce .tap,.reduce .tap .disc,.reduce .window.swap>*,.reduce .spinner{animation:none!important}
 button,textarea,input{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;
   -webkit-tap-highlight-color:transparent}
 :focus{outline:none}
@@ -426,6 +438,7 @@ function render(fresh){
   winEl.classList.toggle('open', !!V.app);
   const sv = winEl.querySelector('.showvid'), svAt = sv && { i:sv.dataset.show, t:sv.currentTime }; // slideshow clip position
   put(winEl, V.app ? winHTML() : '');
+  if(!V.app) LASTWIN = '';
   const nv = winEl.querySelector('.showvid'); // a redraw (e.g. Pause/Play) rebuilds the clip: keep it on the same frame
   if(nv && svAt && nv !== sv && nv.dataset.show === svAt.i){
     nv.autoplay = false; nv.pause();
@@ -521,11 +534,14 @@ function sliderHTML(key, label, icon, val){
   return `<button class="slider" data-k="sl-${key}" data-slider="${key}" role="slider" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
     ${svg(icon)}<span class="sl-l">${label}</span><span class="track"><i style="width:${pct}%"></i></span><span class="sl-v">${pct}%</span></button>`;
 }
+let LASTWIN = ''; // last screen shown in the window, to animate a change of screen within the same app
 function winHTML(){
   const body = (VIEWS[V.app] || (() => ''))(V.arg);
   const o = ORIGIN ? ` style="transform-origin:${ORIGIN.x - 30}px ${ORIGIN.y - 22}px"` : '';
   if(winAnim) setTimeout(() => ORIGIN = null, 500);
-  return `<div class="window glass ${winAnim ? 'enter' : ''}"${o}>${body}</div>
+  const key = V.app + '/' + JSON.stringify(V.arg === undefined ? null : V.arg), swap = !winAnim && LASTWIN && LASTWIN !== key && LASTWIN.split('/')[0] === V.app;
+  LASTWIN = key;
+  return `<div class="window glass ${winAnim ? 'enter' : swap ? 'swap' : ''}"${o}>${body}</div>
     <div class="winbar"><button class="close glass" data-k="close" data-act="close" aria-label="Close">${svg('x')}</button>
     <button class="grab ${moving ? 'moving' : ''}" data-k="grab" data-act="grab" aria-label="${moving ? 'Done moving' : 'Move window'}"><i></i></button></div>`;
 }
@@ -680,7 +696,7 @@ Object.assign(VIEWS, {
         <div class="sub">No location access needed. Swipe left or right to change the city.</div>
         <button class="spin" data-k="wxCity" data-spin="wxcity" data-default><span class="ar">◀</span>${city}<span class="ar">▶</span></button>
         <button class="btn primary" data-k="wxGo" data-act="wxCity" style="margin-top:auto;flex:0 0 auto">Show weather</button>`; }
-    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="title">${W.place ? 'Loading ' + h(W.place) + '…' : 'Finding you…'}</div><div class="sub">${W.place ? 'Getting the forecast.' : 'Location comes from your paired phone.'}</div></div>`;
+    if(W.loading) return `<div class="eyebrow">Weather</div><div class="center"><div class="spinner"></div><div class="title">${W.place ? 'Loading ' + h(W.place) + '…' : 'Finding you…'}</div><div class="sub">${W.place ? 'Getting the forecast.' : 'Location comes from your paired phone.'}</div></div>`;
     if(!wx) return `<div class="eyebrow">Weather</div><div class="center">${discHTML(...appBg('weather'),'#fff',svg('weather'))}
         <div class="title">Local weather</div><div class="sub" style="max-width:400px">Uses your phone's location and the free Open-Meteo forecast.${W.err ? `<br><span style="color:#ff8a84">${h(W.err)}</span>` : ''}</div></div>
         <div class="row2" style="flex:0 0 auto"><button class="btn primary" data-k="wxLoc" data-act="wxLoc" data-default>${svg('loc')}Use my location</button>
@@ -743,7 +759,7 @@ Object.assign(VIEWS, {
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         ${sliderHTML('see', 'Transparency', 'eye', P.see)}
         <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
-        <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
+        <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce Motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-reset" data-act="resetAll"><b style="color:#ff8a84">${confirmKey === 'reset' ? 'Pinch again to erase everything' : 'Reset all data'}</b></button>
       </div>`;
@@ -798,7 +814,7 @@ function pairHTML(arg){
 /* ---------- live updates (4 Hz; the display runs at 30 Hz) ---------- */
 function tick(){
   const d = new Date();
-  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('⏱ Timer done'); speak('Timer done'); if(V.app === 'clock' && V.arg === 'timer') render(); }
+  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); toast('Timer done'); speak('Timer done'); if(V.app === 'clock' && V.arg === 'timer') render(); }
   set('status', statusHTML(), true);
   set('ccTime', fmtTime(d)); set('ccDate', fmtDate(d)); set('clockBig', fmtTime(d)); set('clockDate', fmtDate(d));
   document.querySelectorAll('[data-live-tz]').forEach(e => { const t = fmtTime(d, e.dataset.liveTz); if(e.textContent !== t) e.textContent = t; });
@@ -917,6 +933,8 @@ document.addEventListener('click', e => {
   ACT[act](b.dataset.v, b);
   if(confirmKey === before && !['rmPerson','noteDel','resetAll','trainReset','punchOut','tkClear'].includes(act)) confirmKey = null;
   if(!RENDERED || confirmKey !== before) render();
+  const tapped = b.dataset.k && document.querySelector(`[data-k="${CSS.escape(b.dataset.k)}"]`);
+  if(tapped && !P.reduce){ tapped.classList.remove('tap'); void tapped.offsetWidth; tapped.classList.add('tap'); }
 });
 document.addEventListener('ended', e => {
   const vd = e.target; if(!vd.dataset || vd.dataset.show == null) return;
@@ -1022,10 +1040,13 @@ function updSlider(el){ const v = Math.round(SL[el.dataset.slider].get() * 100);
 let AC = null; const SND = {};
 try { AC = new (window.AudioContext || window.webkitAudioContext)();
   for(const k of ['click', 'done']) fetch(k + '.wav').then(r => r.arrayBuffer()).then(b => AC.decodeAudioData(b)).then(buf => SND[k] = buf).catch(() => {}); } catch(e){}
+const GAIN = { click:.5, done:.85 }, LAST_SND = {};
 function playSound(k){
   if(!P.clicks || !AC || !SND[k]) return;
+  const t = performance.now(); if(t - (LAST_SND[k] || 0) < 45) return; LAST_SND[k] = t;
   try { if(AC.state === 'suspended') AC.resume();
-    const src = AC.createBufferSource(); src.buffer = SND[k]; src.connect(AC.destination); src.start(); } catch(e){}
+    const src = AC.createBufferSource(), g = AC.createGain(); src.buffer = SND[k]; g.gain.value = GAIN[k] || .6;
+    src.connect(g).connect(AC.destination); src.start(); } catch(e){}
 }
 // which sound a pinch makes: checking a task off is the "done" sound, everything else the click
 const soundFor = (act, v) => act === 'tkToggle' && (P.tasks.find(x => x.id === v) || {}).done === false ? 'done' : 'click';
@@ -1120,7 +1141,7 @@ Object.assign(ACT, {
     const t = { id:Math.random().toString(36).slice(2, 9), text, done:false, at:now() };
     P.tasks.unshift(t); if(P.tasks.length > 200) P.tasks.pop(); save(); TD = ''; toast('Task added'); history.back();
   },
-  tkToggle(v){ const t = P.tasks.find(x => x.id === v); if(!t) return; t.done = !t.done; save(); if(t.done) toast('Done ✓'); },
+  tkToggle(v){ const t = P.tasks.find(x => x.id === v); if(!t) return; t.done = !t.done; save(); if(t.done) toast('Task completed'); },
   tkClear(){ if(confirmKey !== 'tkclear'){ confirmKey = 'tkclear'; return; } confirmKey = null; const n = P.tasks.filter(t => t.done).length; P.tasks = P.tasks.filter(t => !t.done); save(); toast(n + ' cleared'); },
 });
 
@@ -1132,7 +1153,7 @@ const workedNow = () => { const u = PU(); return u.in ? now() - u.in - brkMs() :
 const dayStart = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return +d; };
 const weekStart = () => { const d = new Date(dayStart()); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return +d; }; // Monday
 const workedSince = t => PU().log.filter(e => e.in >= t).reduce((a, e) => a + e.out - e.in - e.brk, 0) + (PU().in >= t ? workedNow() : 0);
-const hrs = ms => (ms / 3600000).toFixed(2) + ' h';
+const hrs = ms => { const m = Math.max(0, Math.round(ms / 60000)); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
 function punchState(){
   const u = PU();
   if(!u.in) return 'Off the clock';
