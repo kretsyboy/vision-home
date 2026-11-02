@@ -300,7 +300,6 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   <div id="toast" role="status"></div>
 </div>
 <div id="help">Arrow keys = thumb swipe · Enter = index pinch · Esc = back (middle pinch) · mouse hover = gaze</div>
-<script src="sop.js"></script>
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
@@ -435,6 +434,10 @@ function render(fresh){
   homeEl.classList.toggle('dimmed', !!V.cc);
   $('#wall').classList.toggle('under', !!(V.app || V.cc)); // keep windows readable over the video
   wallPlay();
+  if(!V.app && winEl.contains(document.activeElement)){
+    const back = (!V.cc && restore[P.tab] && homeEl.querySelector(`[data-k="${CSS.escape(restore[P.tab])}"]`)) || homeEl.querySelector('[data-default]');
+    if(back) back.focus({ preventScroll:true });
+  }
   winEl.classList.toggle('open', !!V.app);
   const sv = winEl.querySelector('.showvid'), svAt = sv && { i:sv.dataset.show, t:sv.currentTime }; // slideshow clip position
   put(winEl, V.app ? winHTML() : '');
@@ -452,8 +455,12 @@ function render(fresh){
   const want = keep || (!V.app && !V.cc && restore[P.tab]);
   let el = want && scope.querySelector(`[data-k="${CSS.escape(want)}"]`);
   if(!el) el = scope.querySelector('[data-default]') || focusables(scope)[0];
-  if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' }); }
+  if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' });
+    const gen = INPUT_GEN;
+    for(const ms of [0, 60, 200]) setTimeout(() => { if(gen === INPUT_GEN && el.isConnected && document.activeElement !== el) el.focus({ preventScroll:true }); }, ms);
+  }
 }
+let INPUT_GEN = 0; // bumps on every swipe/pinch, so focus repairs never override something you did
 // replace a layer's markup only when it changed (re-parsing the whole home screen on every pinch is the main cost on the glasses)
 function put(el, html){ if(el._html !== html){ el.innerHTML = html; el._html = html; } }
 const focusables = s => [...s.querySelectorAll('button,textarea,input,[tabindex="0"]')].filter(e => !e.disabled && e.getClientRects().length);
@@ -603,10 +610,21 @@ function stopwatchHTML(){
         <button class="btn" data-k="swLap" data-act="swLap">${run ? 'Lap' : 'Reset'}</button></div>`;
   }
 /* ---------- Training: SOP work instructions ----------
-   The module itself lives in sop.js (an internal SOP, not published); without it Training shows an empty state. Each step has a short headline
+   The tutorials live in sop.js (published with the site, loaded the first time Training opens). Each step has a short headline
    for the lens plus the SOP's own detail, notes and cautions. Time on each step is recorded (cycle time). */
 // sop.js may hold several tutorials (window.TRAINING); each keeps its own progress in P.trains[id]
-const MODULES = window.TRAINING || (window.SOP ? [window.SOP] : []);
+// tutorials (sop.js, ~2.8 MB with the step animations) load the first time Training opens, so app start stays fast;
+// the Mac app injects the same file up front
+let MODULES = window.TRAINING || (window.SOP ? [window.SOP] : []);
+const TRLOAD = { busy:false, failed:false };
+function loadTraining(){
+  if(MODULES.length || TRLOAD.busy) return;
+  TRLOAD.busy = true; TRLOAD.failed = false;
+  const sc = document.createElement('script'); sc.src = 'sop.js';
+  sc.onload = () => { TRLOAD.busy = false; MODULES = window.TRAINING || (window.SOP ? [window.SOP] : []); SOP = MODULES[P.trainMod] || MODULES[0] || NO_MODULE; if(V.app === 'training') render(true); };
+  sc.onerror = () => { TRLOAD.busy = false; TRLOAD.failed = true; sc.remove(); if(V.app === 'training') render(true); };
+  document.head.appendChild(sc);
+}
 const NO_MODULE = { id:'none', title:'No training module', doc:'', ppe:[], tools:[], steps:[] };
 let SOP = MODULES[P.trainMod] || MODULES[0] || NO_MODULE;
 function useModule(i){ trainLeave(); SOP = MODULES[i] || NO_MODULE; P.trainMod = i; save(); }
@@ -633,6 +651,13 @@ const chk = on => `<span class="chk ${on ? 'on' : ''}">${on ? svg('check') : ''}
 
 Object.assign(VIEWS, {
   training(arg){
+    if(!MODULES.length){
+      if(!TRLOAD.failed) loadTraining();
+      return TRLOAD.failed
+        ? `<div class="eyebrow">Training</div><div class="center" style="gap:10px"><div class="title">Couldn’t load the tutorials</div><div class="sub">Check the connection and try again.</div></div>
+           <button class="btn primary" data-k="trRetry" data-act="trRetry" data-default style="flex:0 0 auto">Try again</button>`
+        : `<div class="eyebrow">Training</div><div class="center"><div class="spinner"></div><div class="title">Loading tutorials…</div></div>`;
+    }
     const t = TR(), n = SOP.steps.length, d = doneCount();
     if(arg === 'ppe') return `<div class="eyebrow">Training · Safety</div><div class="title">PPE check</div>
       <div class="sub" style="font-size:.92rem">Don’t start a step until its PPE is on.</div>
@@ -677,7 +702,7 @@ Object.assign(VIEWS, {
         <div class="list">${MODULES.map((m, k) => `<button class="lrow" data-k="trm-${m.id}" data-act="trainPick" data-v="${k}" ${m === SOP ? 'data-default' : ''} style="flex-direction:column;align-items:flex-start;gap:3px">
           <b>${m.title}</b><span class="sub" style="font-size:.9rem">${m.doc} · ${prog(m)}/${m.steps.length} steps</span></button>`).join('')}</div>`;
     }
-    if(!n) return `<div class="eyebrow">Training</div><div class="center" style="gap:10px"><div class="title">No training module loaded</div><div class="sub" style="max-width:420px">Work instructions are kept off the public site. Open SiteVue.AR Home from a computer that has the module to use Training.</div></div>`;
+    if(!n) return `<div class="eyebrow">Training</div><div class="center" style="gap:10px"><div class="title">No tutorials yet</div><div class="sub" style="max-width:420px">Tutorials appear here once they’re added.</div></div>`;
     const started = d > 0 || t.start;
     return `<div class="eyebrow">Training</div><div class="title">${SOP.title}</div><div class="sub" style="font-size:.92rem">${SOP.doc}</div>
       <div class="trk" style="margin-top:6px"><span>${d} of ${n} steps</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span></div>
@@ -869,6 +894,7 @@ const ACT = {
     if(b) b.textContent = SHOW.paused ? 'Play' : 'Pause';
     winEl._html = winHTML(); RENDERED = true; // the page now matches the new state: skip the click handler's redraw
   },
+  trRetry(){ TRLOAD.failed = false; loadTraining(); },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; history.pushState(st, ''); setView(st); },
   trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; history.pushState(st, ''); setView(st); }, // back returns to the overview
   trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
@@ -910,10 +936,11 @@ function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e)
 let INPUT = matchMedia('(hover: hover) and (pointer: fine)').matches ? 'mouse' : 'keys';
 let MOUSE_AT = null;   // last cursor position, to tell a moving mouse from the glasses' resting pointer
 let PRE_FOCUS = null; // what was highlighted when the pointer went down (before the browser moves focus to it)
-document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; }, true);
+document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; INPUT_GEN++; }, true);
 document.addEventListener('mousedown', e => { if(INPUT === 'keys') e.preventDefault(); }, true); // keep the highlight where the swipes put it
 document.addEventListener('click', e => {
-  const target = INPUT === 'keys' && e.detail > 0 ? (PRE_FOCUS && PRE_FOCUS !== document.body ? PRE_FOCUS : document.activeElement) : e.target;
+  const pre = PRE_FOCUS && PRE_FOCUS !== document.body && PRE_FOCUS.isConnected ? PRE_FOCUS : document.activeElement;
+  const target = INPUT === 'keys' && e.detail > 0 ? pre : e.target;
   if(INPUT === 'keys' && e.detail > 0 && target && target.focus) target.focus({ preventScroll:true });
   if(!target || !target.closest) return;
   const sl = target.closest('[data-slider]');
@@ -964,6 +991,7 @@ function spin(k, d){ SPIN[k](d); save(); apply(); render(); }
 /* ---------- Neural Band / touchpad: the OS sends arrow keys + Enter; Back calls history.back() ---------- */
 const DIRS = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] };
 document.addEventListener('keydown', e => {
+  INPUT_GEN++;
   if(e.isTrusted && (DIRS[e.key] || e.key === 'Enter')) BAND.last = now();
   if(DIRS[e.key] || e.key === 'Enter' || e.key === 'Escape') INPUT = 'keys';
   const a = document.activeElement, typing = a && /^(TEXTAREA|INPUT)$/.test(a.tagName);
@@ -1017,7 +1045,7 @@ document.addEventListener('pointermove', e => {
       MOUSE_AT = { x:e.clientX, y:e.clientY };
     }
     if(e.pointerType === 'mouse' && INPUT === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
-      if(t && t !== document.activeElement && scope.contains(t)) t.focus({ preventScroll:true }); }
+      if(t && t !== document.activeElement && scope.contains(t)){ INPUT_GEN++; t.focus({ preventScroll:true }); } }
     return;
   }
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
