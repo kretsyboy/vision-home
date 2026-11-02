@@ -101,20 +101,20 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .icon{position:absolute;width:96px;display:flex;flex-direction:column;align-items:center;gap:14px;border-radius:50%}
 .icon:focus{box-shadow:none}
 .markbg{position:absolute;pointer-events:none;fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.12);stroke-width:2;opacity:calc(1 - var(--see,0));transition:opacity .4s var(--ease)}
-.icon.hero{width:136px}
-.icon.hero .disc{width:136px;height:136px}
+.icon.hero{width:146px}
+.icon.hero .disc{width:146px;height:146px}
 .icon.hero .fg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-.icon.hero .fg svg{width:56px;height:56px}
-.icon.hero .fg b{font-size:1.02rem;font-weight:700;letter-spacing:.01em}
+.icon.hero .fg svg{width:60px;height:60px}
+.icon.hero .fg b{font-size:1.08rem;font-weight:700;letter-spacing:.01em}
 .icon.hero:focus .disc{scale:1.03}
-.disc{position:relative;width:58px;height:58px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
+.disc{position:relative;width:64px;height:64px;border-radius:50%;transition:scale .3s var(--spring),box-shadow .2s}
 .disc .bg{position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 34% 24%,var(--c1),var(--c2) 78%)}
 .disc::after{content:"";position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 32% 20%,rgba(255,255,255,.42),transparent 52%);pointer-events:none}
 .disc .fg{position:absolute;inset:0;display:grid;place-items:center;transition:translate .3s var(--spring),scale .3s var(--spring)}
-.disc .fg svg{width:29px;height:29px}
-.disc .ini{font-size:20px;font-weight:700;letter-spacing:.02em}
+.disc .fg svg{width:32px;height:32px}
+.disc .ini{font-size:22px;font-weight:700;letter-spacing:.02em}
 .icon .nm{font-size:.95rem;font-weight:600;color:var(--ink-2);white-space:nowrap;line-height:1.15;text-align:center}
 .icon .nm small{display:block;font-size:.8rem;font-weight:500;color:var(--ink-3)}
 /* gaze highlight: the disc lifts, the glyph layer moves further than the backplate (parallax) */
@@ -571,7 +571,7 @@ function markBgHTML(){
   const w = 472 * MARK_K, hh = 494 * MARK_K, l = MARK_AT[0] - MARK_C[0] * MARK_K, t = MARK_AT[1] - MARK_C[1] * MARK_K;
   return `<svg class="markbg" viewBox="0 0 472 494" style="left:${l}px;top:${t}px;width:${w}px;height:${hh}px" aria-hidden="true"><path d="${MARK_BRACKETS}"/></svg>`;
 }
-const at = (p, big) => big ? `left:${p.x - 68}px;top:${p.y - 68}px` : `left:${p.x - 48}px;top:${p.y - 29}px`; // disc (58 px, hero 136 px) centered on the point
+const at = (p, big) => big ? `left:${p.x - 73}px;top:${p.y - 73}px` : `left:${p.x - 48}px;top:${p.y - 32}px`; // disc (64 px, hero 146 px) centered on the point
 
 function homeHTML(){
   const tabs = [['apps','Apps'],['people','People']].map(([id, l]) =>
