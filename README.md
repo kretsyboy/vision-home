@@ -77,3 +77,11 @@ Watch what the glasses show, live, on any computer (Windows, Mac, Linux) in a we
 2. On the computer: open **kretsyboy.github.io/vision-home/watch** and enter the code.
 
 The viewer replays the glasses' screen (open app, highlight, timers, animations) and can't control the glasses. Everything is encrypted with AES-GCM using a key made from the code, before it leaves the glasses; it travels through HiveMQ's free public MQTT relay, which only sees scrambled data. **Stop mirroring** ends it and clears the last screen from the relay.
+
+## Wallpaper photo
+
+Use your own picture behind the apps.
+
+- **From your iPhone (for the glasses):** on the glasses, **Settings → Wallpaper photo → Get a photo from my iPhone** shows a code. On the iPhone, open **kretsyboy.github.io/vision-home/photo**, enter the code, choose a photo from Photos and tap **Send to glasses**. It's squared to 600 × 600 and sent encrypted (the same way as mirroring, on its own channel); it's removed from the relay once the glasses have it.
+- **On a phone or computer:** **Choose a photo on this device** picks one directly.
+- **Use the SiteVue wallpaper** switches back. The Wallpaper brightness and Transparency settings apply to photos too.

@@ -49,7 +49,25 @@ svg{display:block}
 #stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 /* no wallpaper behind the SiteVue AI intro: it fades in once the intro hands over to Home */
-#stage.booting #wall{opacity:0}
+#stage.booting #wall,#stage.booting #wallimg{opacity:0}
+/* your own photo as the wallpaper (it replaces the video; the Wallpaper and Transparency settings apply to it too) */
+#wallimg{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;pointer-events:none;transition:opacity .4s var(--ease)}
+#wallimg.on{opacity:calc(var(--wall) * (1 - var(--see,0)))}
+#wall.hidden{display:none}
+.under~#wallimg.on{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
+/* the iPhone send page */
+.photosend #stage,.photosend #help{display:none!important}
+body.photosend{display:block;min-width:0;min-height:0;overflow:auto;touch-action:auto}
+#photosend{max-width:440px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:14px;color:#eee;font-size:17px;line-height:1.4}
+#photosend h1{font-size:26px;margin:0}
+#photosend p{margin:0;color:#bbb}
+#photosend input#ps-code{height:52px;border-radius:14px;background:#1c1e24;border:1px solid #3a3f47;padding:0 16px;font:600 22px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#fff;text-transform:uppercase}
+.ps-btn{display:flex;align-items:center;justify-content:center;height:54px;border-radius:27px;background:#2a2d36;color:#fff;font-weight:600;font-size:18px;cursor:pointer}
+.ps-btn.primary{background:#4c52f9}
+.ps-btn:disabled{opacity:.4}
+#ps-preview{display:none;aspect-ratio:1;border-radius:22px;background:center/cover no-repeat}
+#ps-preview.on{display:block}
+#photosend .ps-note{font-size:14px;color:#888}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
 /* Transparency mode (--see 0/1) removes everything behind the apps (the wallpaper above and the logo outline), so only
    apps, buttons, icons and windows float over the real world; they stay fully visible */
@@ -280,6 +298,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 
 /* ---------- mirroring ---------- */
 .mirr{color:#ff6b6b;font-weight:700}
+.phthumb{width:56px;height:56px;border-radius:14px;background:center/cover;flex:0 0 auto}
 .mcode{font:700 2.6rem/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;padding:8px 18px;border-radius:18px;background:rgba(255,255,255,.1)}
 .watching #help{display:none!important}
 .watching #stage{scale:var(--vz,1)}
@@ -314,6 +333,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 <body>
 <div id="stage" class="booting">
   <video id="wall" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
+  <div id="wallimg" aria-hidden="true"></div>
   <div id="ui">
     <div id="home"></div>
     <div id="win" role="dialog"></div>
@@ -340,6 +360,7 @@ const h = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const now = () => Date.now();
 // ?watch=CODE: this page is a viewer mirroring someone's glasses (see "Mirror to a computer"); ?watch alone asks for the code
+const PHOTOSEND = (() => { const m = location.search.match(/[?&]photo(?:=([^&]*))?/); return m ? decodeURIComponent(m[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '') : null; })();
 const WATCH = (() => { const m = location.search.match(/[?&]watch(?:=([^&]*))?/); return m ? decodeURIComponent(m[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '') : null; })();
 if(WATCH !== null) for(const t of ['keydown','keyup','click','pointerdown','pointerup','pointermove','mousedown','wheel','input','touchstart'])
   addEventListener(t, e => { if(!(e.target.closest && e.target.closest('#watchbar'))){ e.stopImmediatePropagation(); if(t !== 'pointermove') e.preventDefault(); } }, true);
@@ -459,6 +480,7 @@ addEventListener('popstate', e => setView(e.state || {}));
 let RENDERED = false; // set by render(); lets the click handler skip a second, redundant render
 function setView(st){
   const prev = V; V = st || {};
+  if(prev.app === 'settings' && prev.arg === 'photo' && !(V.app === 'settings' && V.arg === 'photo') && PHOTO.client) photoStop();
   if(prev.app === 'training' && prev.arg === 'step' && !(V.app === 'training' && V.arg === 'step')) trainLeave();
   if(V.app && !VIEWS[V.app]) V = {}; // e.g. a history entry for a removed app
   if(V.app && !prev.app) winAnim = true;
@@ -828,6 +850,20 @@ Object.assign(VIEWS, {
   },
   settings(arg){
     if(arg === 'bt') return btHTML();
+    if(arg === 'photo'){
+      const mine = wallPhoto(), here = !isLens();
+      if(PHOTO.code) return `<div class="eyebrow">Wallpaper photo</div>
+        <div class="center" style="gap:6px;flex:0 0 auto"><div class="sub">On your iPhone, open</div><div class="title" style="font-size:1.25rem">kretsyboy.github.io/vision-home/photo</div>
+        <div class="sub">and enter</div><div class="mcode">${fmtCode(PHOTO.code)}</div><div class="sub" data-live="photoStatus">${photoStatusText()}</div></div>
+        <button class="btn" data-k="ph-cancel" data-act="photoCancel" data-default style="flex:0 0 auto;margin-top:auto">Cancel</button>`;
+      return `<div class="eyebrow">Settings</div><div class="title">Wallpaper photo</div>
+        <div class="lrow" tabindex="0" data-k="ph-now" style="justify-content:flex-start;gap:14px"><span class="phthumb" style="background-image:url('${mine || 'wallpaper.jpg'}')"></span><span><b>${mine ? 'Your photo' : 'SiteVue (default)'}</b><span class="st">Bright parts show on the lens; dark parts stay see-through</span></span></div>
+        <div class="list" style="flex:0 0 auto">
+          <button class="lrow" data-k="ph-iphone" data-act="photoFromPhone" data-default><b>Get a photo from my iPhone</b><span class="r">›</span></button>
+          ${here ? `<button class="lrow" data-k="ph-here" data-act="photoHere"><b>Choose a photo on this device</b><span class="r">›</span></button>` : ''}
+          ${mine ? `<button class="lrow" data-k="ph-reset" data-act="photoReset"><b>Use the SiteVue wallpaper</b></button>` : ''}
+        </div>`;
+    }
     if(arg === 'mirror'){
       const on = P.mirror && P.mirror.on;
       if(!on) return `<div class="eyebrow">Settings</div><div class="title">Mirror to a computer</div>
@@ -850,6 +886,7 @@ Object.assign(VIEWS, {
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
         <button class="lrow" data-k="s-see" data-act="tile" data-v="see"><b>Transparency</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">hides the background</span><span class="tog ${P.see ? 'on' : ''}"></span></span></button>
+        <button class="lrow" data-k="s-photo" data-act="btOpen" data-v="photo"><b>Wallpaper photo</b><span class="r">${wallPhoto() ? 'Your photo' : 'SiteVue'} ›</span></button>
         <button class="lrow" data-k="s-wallmove" data-act="tile" data-v="wallmove"><b>Animated Background</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">${isLens() ? 'off is smoother' : ''}</span><span class="tog ${wallMoves() ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce Motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
@@ -923,6 +960,7 @@ function tick(){
   if(V.app === 'clockin' && !V.arg){ const u = PU(); set('punchState', punchState()); set('punchTime', fmtDur(workedNow())); if(u.in) set('punchBrk', 'Break ' + fmtDur(brkMs())); set('punchTotals', `Today ${hrs(workedSince(dayStart()))} · Week ${hrs(workedSince(weekStart()))} ›`); }
   if(V.app === 'training' && V.arg === 'step'){ const t = TR(); set('trtime', 'On this step ' + fmtDur(now() - (t.stepAt || now()))); if(t.cure) set('cure', cureText()); }
   if(V.app === 'settings' && V.arg === 'mirror') set('mirrorStatus', mirrorStatusText());
+  if(V.app === 'settings' && V.arg === 'photo') set('photoStatus', photoStatusText());
   if(V.app === 'settings'){ set('st-glasses', stHTML(glassesState()), true); set('st-band', stHTML(bandState()), true); set('btSummary', btSummary() + ' ›'); }
 }
 const q = k => document.querySelector(`[data-live="${k}"]`);
@@ -969,6 +1007,10 @@ const ACT = {
     if(b) b.textContent = SHOW.paused ? 'Play' : 'Pause';
     winEl._html = winHTML(); RENDERED = true; // the page now matches the new state: skip the click handler's redraw
   },
+  photoFromPhone(){ photoReceive(); },
+  photoCancel(){ photoStop(); },
+  photoHere(){ pickHere(); },
+  photoReset(){ setWallPhoto(''); toast('SiteVue wallpaper restored'); },
   mirrorOn(){ mirrorStart(mirrorCode()); },
   mirrorOff(){ mirrorStopLink(); P.mirror = { on:false }; save(); toast('Mirroring stopped'); },
   trRetry(){ TRLOAD.failed = false; loadTraining(); },
@@ -1408,6 +1450,7 @@ Object.assign(ACT, {
 
 /* ---------- boot intro: the SiteVue AI logo pieces float in 3D, then assemble ---------- */
 function runIntro(){
+  if(PHOTOSEND !== null) return;
   if(WATCH !== null){ $('#boot').remove(); $('#stage').classList.remove('booting'); return; }
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
@@ -1631,6 +1674,97 @@ function setupWatch(){
   if(WATCH) mirrorWatch(WATCH);
 }
 
+/* ---------- Wallpaper photo ----------
+   The glasses have no photo library, so the photo is chosen on the iPhone: Settings → Wallpaper photo shows a code,
+   the iPhone opens /photo, picks a picture from Photos, and it's squared to 600 x 600 and sent encrypted (same relay and
+   AES-GCM scheme as mirroring, its own channel) straight to the glasses. On a phone or computer the app can also pick a
+   photo directly. The photo is kept on the device in its own storage slot (not in P, so mirroring stays light). */
+const PHOTO_KEY = 'sitevue-ar-wallphoto';
+const PHOTO = { client:null, code:'', state:'off' };
+const wallPhoto = () => { try { return localStorage.getItem(PHOTO_KEY) || ''; } catch(e){ return ''; } };
+function setWallPhoto(dataURL){
+  try { if(dataURL) localStorage.setItem(PHOTO_KEY, dataURL); else localStorage.removeItem(PHOTO_KEY); } catch(e){ toast('Not enough space for that photo'); return; }
+  showWallPhoto(); wallPlay();
+}
+function showWallPhoto(){
+  const u = wallPhoto(), el = $('#wallimg');
+  el.style.backgroundImage = u ? `url("${u}")` : ''; el.classList.toggle('on', !!u);
+  $('#wall').classList.toggle('hidden', !!u);
+}
+// any picture (iPhone photos arrive as JPEG) → a centered 600 x 600 square JPEG, about 60–120 KB
+function squarePhoto(file){
+  return new Promise((ok, fail) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 600;
+      const s = Math.min(img.naturalWidth, img.naturalHeight);
+      c.getContext('2d').drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, 600, 600);
+      URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', .82)); };
+    img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('That file isn’t a photo this browser can open')); };
+    img.src = url;
+  });
+}
+async function photoKeys(code){ const k = await mirrorKeys('photo:' + code); return k; } // a channel of its own, separate from mirroring
+// glasses side: wait for a photo on the code's channel
+async function photoReceive(){
+  photoStop();
+  PHOTO.code = mirrorCode();
+  const k = await photoKeys(PHOTO.code), key = k.key;
+  PHOTO.client = mqttClient(MIRROR_RELAY, async (topic, data) => {
+    if(topic !== k.topic || !data.length) return;
+    try {
+      const iv = data.subarray(0, 12), pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, data.subarray(12));
+      const msg = JSON.parse(new TextDecoder().decode(pt));
+      if(msg.img && msg.img.startsWith('data:image/')){
+        setWallPhoto(msg.img); PHOTO.client.publish(k.topic, new Uint8Array(0), true); // clear it from the relay
+        toast('Wallpaper updated'); photoStop(); if(V.app === 'settings') render();
+      }
+    } catch(e){}
+  }, st => { PHOTO.state = st; if(st === 'on') PHOTO.client.subscribe(k.topic); set('photoStatus', photoStatusText()); });
+  render();
+}
+function photoStop(){ if(PHOTO.client){ const c = PHOTO.client; setTimeout(() => c.end(), 400); } PHOTO.client = null; PHOTO.code = ''; PHOTO.state = 'off'; }
+const photoStatusText = () => PHOTO.state === 'on' ? 'Waiting for your photo…' : PHOTO.state === 'connecting' ? 'Connecting…' : PHOTO.state === 'offline' ? 'Offline · retrying…' : '';
+// pick a photo right here (phones and computers; the glasses have no file picker)
+function pickHere(){
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = async () => { const f = inp.files && inp.files[0]; if(!f) return;
+    try { setWallPhoto(await squarePhoto(f)); toast('Wallpaper updated'); render(); } catch(e){ toast(e.message); } };
+  inp.click();
+}
+// the iPhone page (?photo=CODE, or /photo): choose a photo, preview it, send it to the glasses
+function setupPhotoSend(){
+  $('#boot') && $('#boot').remove();
+  const vp = document.querySelector('meta[name=viewport]'); if(vp) vp.content = 'width=device-width, initial-scale=1'; // a normal phone page, not the 600 px lens
+  document.body.classList.add('photosend');
+  document.body.insertAdjacentHTML('beforeend', `<div id="photosend">
+    <h1>Send a wallpaper to your glasses</h1>
+    <p>On the glasses, open <b>Settings → Wallpaper photo → Get a photo from my iPhone</b> and enter the code it shows.</p>
+    <input id="ps-code" maxlength="9" placeholder="ABCD-2345" autocomplete="off" value="${PHOTOSEND ? fmtCode(PHOTOSEND) : ''}">
+    <label class="ps-btn" for="ps-file">Choose a photo</label><input id="ps-file" type="file" accept="image/*" hidden>
+    <div id="ps-preview"></div>
+    <button id="ps-send" class="ps-btn primary" disabled>Send to glasses</button>
+    <p id="ps-status"></p>
+    <p class="ps-note">The photo is squared, encrypted with the code and sent through a public relay that can't see it.</p></div>`);
+  let img = '';
+  const status = t => $('#ps-status').textContent = t;
+  const ready = () => { $('#ps-send').disabled = !(img && $('#ps-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '').length === 8); };
+  $('#ps-code').addEventListener('input', ready);
+  $('#ps-file').addEventListener('change', async e => { const f = e.target.files && e.target.files[0]; if(!f) return;
+    try { img = await squarePhoto(f); $('#ps-preview').style.backgroundImage = `url("${img}")`; $('#ps-preview').classList.add('on'); status(''); } catch(err){ status(err.message); }
+    ready(); });
+  $('#ps-send').addEventListener('click', async () => {
+    const code = $('#ps-code').value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if(code.length !== 8 || !img) return;
+    $('#ps-send').disabled = true; status('Sending…');
+    const k = await photoKeys(code), iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, k.key, new TextEncoder().encode(JSON.stringify({ img }))));
+    const payload = new Uint8Array(12 + ct.length); payload.set(iv); payload.set(ct, 12);
+    const c = mqttClient(MIRROR_RELAY, () => {}, st => {
+      if(st === 'on'){ c.publish(k.topic, payload, true); status('Sent! It appears on the glasses in a moment.'); setTimeout(() => c.end(), 1500); $('#ps-send').disabled = false; }
+      else if(st === 'offline') status('Couldn’t reach the relay. Check the connection and try again.');
+    });
+  });
+}
+
 /* ---------- boot ---------- */
 const WALL_SPEED = 1; // the file is already slowed to 60% (600x600, 18 fps), so it plays at its native rate - cheaper to decode
 // some browsers reset the rate when the source (re)loads
@@ -1655,7 +1789,7 @@ const isLens = () => innerWidth <= 600 && innerHeight <= 600 && !(window.webkit 
 const wallMoves = () => P.wallMove != null ? P.wallMove : !isLens();
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
-  const freeDecoder = $('#stage').classList.contains('booting') || !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
+  const freeDecoder = $('#stage').classList.contains('booting') || !!wallPhoto() || !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
   if(freeDecoder){
     if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
     return;
@@ -1681,7 +1815,9 @@ apply();
 history.replaceState({}, '');
 render(true);
 runIntro();
-if(WATCH !== null) setupWatch();
+showWallPhoto();
+if(PHOTOSEND !== null) setupPhotoSend();
+else if(WATCH !== null) setupWatch();
 else if(P.mirror && P.mirror.on && P.mirror.code) mirrorStart(P.mirror.code); // keep mirroring across restarts until stopped
 </script>
 </body>
