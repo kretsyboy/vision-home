@@ -939,8 +939,13 @@ function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e)
 /* The glasses' pointer rests mid-screen, right over Notes. In 'keys' mode (swipes and pinches) a pointer-made
    click is sent to the highlighted control instead of whatever sits under the pointer. A real mouse moving on a
    computer switches to 'mouse' mode, where clicks and hover-to-highlight follow the cursor. */
-let INPUT = matchMedia('(hover: hover) and (pointer: fine)').matches ? 'mouse' : 'keys';
+let INPUT = matchMedia('(hover: hover) and (pointer: fine)').matches && !(innerWidth <= 600 && innerHeight <= 600 && !matchMedia('(hover: hover)').matches) ? 'mouse' : 'keys';
 let MOUSE_AT = null;   // last cursor position, to tell a moving mouse from the glasses' resting pointer
+// Mouse mode needs a real computer mouse (fine pointer that can hover, not the lens) moved deliberately: 40 px of travel
+// in one continuous motion. The glasses' pointer wobbles a few pixels on its own, which used to flip the app into
+// mouse mode, so a pinch then hit whatever was under the pointer instead of the highlighted button.
+const MOUSE_OK = () => matchMedia('(hover: hover) and (pointer: fine)').matches && !onGlasses();
+let MOUSE_RUN = 0, MOUSE_T = 0;
 let PRE_FOCUS = null, PRE_AT = 0; // what was highlighted when the pointer went down, and when
 let LAST_ACT = 0;      // when the last pinch acted: one pinch can reach us twice (the band's select key and a pointer click)
 document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; PRE_AT = performance.now(); INPUT_GEN++; }, true);
@@ -1006,7 +1011,7 @@ const DIRS = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,
 document.addEventListener('keydown', e => {
   INPUT_GEN++;
   if(e.isTrusted && (DIRS[e.key] || e.key === 'Enter')) BAND.last = now();
-  if(DIRS[e.key] || e.key === 'Enter' || e.key === 'Escape') INPUT = 'keys';
+  if(DIRS[e.key] || e.key === 'Enter' || e.key === 'Escape'){ INPUT = 'keys'; MOUSE_RUN = 0; }
   const a = document.activeElement, typing = a && /^(TEXTAREA|INPUT)$/.test(a.tagName);
   if(e.key === 'Enter' && a && a.dataset.taskDraft){ e.preventDefault(); return ACT.tkSave(), render(); }
   if(e.key === 'Escape' || (e.key === 'Backspace' && !typing)){
@@ -1054,8 +1059,11 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   if(!drag){
     if(e.pointerType === 'mouse' && !e.buttons){ // a real cursor that actually travels switches to mouse mode; a resting pointer never does
-      if(MOUSE_AT && Math.hypot(e.clientX - MOUSE_AT.x, e.clientY - MOUSE_AT.y) > 3) INPUT = 'mouse';
-      MOUSE_AT = { x:e.clientX, y:e.clientY };
+      const tm = performance.now();
+      if(tm - MOUSE_T > 300) MOUSE_RUN = 0; // a pause ends the motion
+      if(MOUSE_AT) MOUSE_RUN += Math.hypot(e.clientX - MOUSE_AT.x, e.clientY - MOUSE_AT.y);
+      if(MOUSE_RUN > 40 && MOUSE_OK()) INPUT = 'mouse';
+      MOUSE_AT = { x:e.clientX, y:e.clientY }; MOUSE_T = tm;
     }
     if(e.pointerType === 'mouse' && INPUT === 'mouse'){ const t = e.target.closest('button,textarea,input,[tabindex="0"]'), scope = V.cc ? ccEl : V.app ? winEl : homeEl;
       if(t && t !== document.activeElement && scope.contains(t)){ INPUT_GEN++; t.focus({ preventScroll:true }); } }
