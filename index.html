@@ -49,8 +49,9 @@ svg{display:block}
 #stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
-/* Transparency (--see) fades the whole app so the outside world shows through the lens; capped at 85% so it never vanishes */
-#ui{position:absolute;inset:0;opacity:calc(var(--bright) * (1 - var(--see,0)));transition:opacity .2s}
+/* Transparency (--see) fades only the wallpaper (rules above), so the outside world shows through behind the apps,
+   which stay fully visible; at 100% the wallpaper is gone and the lens is clear behind them */
+#ui{position:absolute;inset:0;opacity:var(--bright);transition:opacity .2s}
 .glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .g2{background:var(--glass-2);border-radius:22px}
@@ -998,7 +999,7 @@ document.addEventListener('input', e => {
 
 /* ---------- sliders and spinners ---------- */
 const SL = { bright:{ min:.3, get:() => P.bright, set:v => P.bright = v }, wall:{ min:0, get:() => P.wall, set:v => P.wall = v },
-  see:{ min:0, max:.85, get:() => P.see, set:v => P.see = v } };
+  see:{ min:0, get:() => P.see, set:v => P.see = v } };
 function setSlider(k, v){ const s = SL[k]; s.set(clamp(Math.round(v * 100) / 100, s.min, s.max || 1)); save(); apply(); render(); }
 const SPIN = {
   timer:d => { P.timer.dur = clamp(P.timer.dur + d * 60000, 60000, 99 * 60000); P.timer.left = null; },
