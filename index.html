@@ -1051,7 +1051,20 @@ function moveFocus([dx, dy]){
     const sc = along + across * 2.2;
     if(sc < bs){ bs = sc; best = el; }
   }
-  if(best){ best.focus({ preventScroll:true }); best.scrollIntoView({ block:'nearest' }); }
+  // nothing straight ahead: the nearest control anywhere on that side
+  if(!best){ bs = Infinity;
+    for(const el of items){ if(el === cur) continue; const p = center(el), along = (p.x - c.x) * dx + (p.y - c.y) * dy;
+      const across = dx ? Math.abs(p.y - c.y) : Math.abs(p.x - c.x);
+      if(along > 4 && across < along * 2.5){ const sc = Math.hypot(p.x - c.x, p.y - c.y); if(sc < bs){ bs = sc; best = el; } } } }
+  // at the edge: wrap round to the far side, staying in the same row or column where possible
+  if(!best){ bs = Infinity;
+    for(const el of items){ if(el === cur) continue; const p = center(el), along = (p.x - c.x) * dx + (p.y - c.y) * dy;
+      const across = dx ? Math.abs(p.y - c.y) : Math.abs(p.x - c.x);
+      if(el.closest('.winbar') && !cur.closest('.winbar')) continue; // wrap within the window, not onto its close bar
+      if(along < -4 && across < 80){ const sc = across * 2 + along; if(sc < bs){ bs = sc; best = el; } } } }
+  // a single column or row with nothing beside it: sideways swipes step through the controls in order
+  if(!best){ const k = items.indexOf(cur), step = dx + dy > 0 ? 1 : -1; best = items[(k + step + items.length) % items.length]; }
+  if(best && best !== cur){ best.focus({ preventScroll:true }); best.scrollIntoView({ block:'nearest' }); }
 }
 function center(el){ const r = (el.querySelector('.disc') || el).getBoundingClientRect(); return { x:r.left + r.width / 2, y:r.top + r.height / 2, r }; }
 
