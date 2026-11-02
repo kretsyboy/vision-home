@@ -429,17 +429,22 @@ function hue(n){ let x = 0; for(const c of n) x = (x * 31 + c.charCodeAt(0)) % 3
 /* ---------- view state + history (host allows 5 entries; we never go deeper than 3) ---------- */
 let V = {}, winAnim = false, ccAnim = false, moving = false, confirmKey = null, restore = {};
 const homeEl = $('#home'), winEl = $('#win'), ccEl = $('#cc');
+// each history entry records how deep it is (d), so the × can close a window from any depth in one step
+const hDepth = () => (history.state && history.state.d) || 0;
+function hPush(st){ st.d = hDepth() + 1; history.pushState(st, ''); }
+function hReplace(st){ st.d = hDepth(); history.replaceState(st, ''); }
+function closeAll(){ const d = hDepth(); if(d > 0) history.go(-d); else if(V.app || V.cc) setView({}); }
 function open(app, arg){
   const st = { app, arg };
-  if(!V.app && !V.cc) history.pushState(st, ''); else history.replaceState(st, '');
+  if(!V.app && !V.cc) hPush(st); else hReplace(st);
   setView(st);
 }
 function sub(arg){
   const st = { app:V.app, arg };
-  if(V.arg === undefined) history.pushState(st, ''); else history.replaceState(st, '');
+  if(V.arg === undefined) hPush(st); else hReplace(st);
   setView(st);
 }
-function openCC(){ history.pushState({ cc:1 }, ''); setView({ cc:1 }); }
+function openCC(){ const st = { cc:1 }; hPush(st); setView(st); }
 function back(){ if(V.app || V.cc) history.back(); }
 addEventListener('popstate', e => setView(e.state || {}));
 let RENDERED = false; // set by render(); lets the click handler skip a second, redundant render
@@ -582,7 +587,7 @@ function winHTML(){
   const key = V.app + '/' + JSON.stringify(V.arg === undefined ? null : V.arg), swap = !winAnim && LASTWIN && LASTWIN !== key && LASTWIN.split('/')[0] === V.app;
   LASTWIN = key;
   return `<div class="window glass ${winAnim ? 'enter' : swap ? 'swap' : ''}"${o}>${body}</div>
-    <div class="winbar"><button class="close glass" data-k="close" data-act="close" aria-label="Close">${svg('x')}</button>
+    <div class="winbar"><button class="close glass" data-k="close" data-act="closeAll" aria-label="Close">${svg('x')}</button>
     <button class="grab ${moving ? 'moving' : ''}" data-k="grab" data-act="grab" aria-label="${moving ? 'Done moving' : 'Move window'}"><i></i></button></div>`;
 }
 function ccHTML(){
@@ -597,7 +602,7 @@ function ccHTML(){
       ${tile('dnd', 'Do Not<br>Disturb', 'moon', P.dnd)}${tile('reduce', 'Reduce<br>Motion', 'motion', P.reduce)}${tile('recenter', 'Recenter', 'recenter')}
       ${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
     </div>
-    <button class="ccclose glass" data-k="cc-close" data-act="close" aria-label="Close Control Center">${svg('x')}</button></div>`;
+    <button class="ccclose glass" data-k="cc-close" data-act="closeAll" aria-label="Close Control Center">${svg('x')}</button></div>`;
 }
 
 /* ---------- apps ---------- */
@@ -917,10 +922,11 @@ setInterval(tick, 250);
 /* ---------- actions (pinch / Enter → click on the focused control) ---------- */
 const ACT = {
   tab(v){ P.tab = v; save(); render(); focusKey('tab-' + v); },
-  cc(){ openCC(); },
+  cc(){ restore[P.tab] = 'cc'; openCC(); }, // closing Control Center returns the highlight to the chevron
   app(v, b){ if(!V.app){ restore.apps = 'app-' + v; setOrigin(b); }
     open(v); },
   close(){ back(); },
+  closeAll(){ closeAll(); },
   grab(){ moving = !moving; toast(moving ? 'Swipe to move · pinch to drop' : 'Window placed'); },
   person(v, b){ restore.people = 'person-' + v; setOrigin(b); open('person', +v); },
   addPerson(v, b){ restore.people = 'person-add'; D = { name:'', city:1 }; setOrigin(b); open('addPerson'); },
@@ -940,9 +946,9 @@ const ACT = {
     if(v === 'settings' || v === 'tips') open(v);
     save(); apply();
   },
-  clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; history.replaceState(st, ''); V = st; },
-  btOpen(v){ const st = { app:'settings', arg:v }; history.pushState(st, ''); setView(st); },
-  trainShow(){ SHOW.i = 0; SHOW.paused = false; const st = { app:'training', arg:'show' }; history.pushState(st, ''); setView(st); },
+  clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; hReplace(st); V = st; },
+  btOpen(v){ const st = { app:'settings', arg:v }; hPush(st); setView(st); },
+  trainShow(){ SHOW.i = 0; SHOW.paused = false; const st = { app:'training', arg:'show' }; hPush(st); setView(st); },
   showStep(v){ SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
   showPlay(){ // works on the clip in place (no redraw), so it pauses and resumes on the exact frame
     const vd = document.querySelector('.showvid'), b = document.querySelector('[data-k="sh-play"]'); SHOW.paused = !SHOW.paused;
@@ -956,13 +962,13 @@ const ACT = {
   mirrorOn(){ mirrorStart(mirrorCode()); },
   mirrorOff(){ mirrorStopLink(); P.mirror = { on:false }; save(); toast('Mirroring stopped'); },
   trRetry(){ TRLOAD.failed = false; loadTraining(); },
-  trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; history.pushState(st, ''); setView(st); },
-  trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; history.pushState(st, ''); setView(st); }, // back returns to the overview
+  trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; hPush(st); setView(st); },
+  trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; hPush(st); setView(st); }, // back returns to the overview
   trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
   trainStep(v){ trainGo(TR().cur + +v); },
   trainDone(){
     const t = TR(); t.done[t.cur] = true;
-    if(doneCount() >= SOP.steps.length || t.cur === SOP.steps.length - 1){ trainLeave(); history.replaceState({ app:'training', arg:'done' }, ''); setView({ app:'training', arg:'done' }); speak('Training complete'); return; }
+    if(doneCount() >= SOP.steps.length || t.cur === SOP.steps.length - 1){ trainLeave(); const dn = { app:'training', arg:'done' }; hReplace(dn); setView(dn); speak('Training complete'); return; }
     let nx = t.cur + 1; while(nx < SOP.steps.length && t.done[nx]) nx++;
     trainGo(nx < SOP.steps.length ? nx : t.cur + 1);
   },
