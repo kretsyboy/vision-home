@@ -1854,6 +1854,35 @@ async function refreshTheme(){
   render();
 }
 
+/* ---------- staying up to date ----------
+   The glasses (and browsers) can keep running an old saved copy of the app long after a new version is published.
+   So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
+   to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
+   the middle of using an app. APP_BUILD changes with every publish. */
+const APP_BUILD = '2026-11-02-01';
+let UPDATE_READY = false;
+async function checkForUpdate(){
+  if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
+  try {
+    const url = location.pathname + '?build-check=' + now();
+    const txt = await (await fetch(url, { cache:'no-store' })).text(), m = txt.match(/const APP_BUILD = '([^']+)'/);
+    if(m && m[1] !== APP_BUILD){
+      await fetch(location.pathname, { cache:'reload' }).catch(() => {}); // replace the saved copy with the new one
+      UPDATE_READY = true; applyUpdateWhenIdle();
+    }
+  } catch(e){}
+}
+function applyUpdateWhenIdle(){
+  if(!UPDATE_READY) return;
+  if(V.app || V.cc || RING.on) return; // wait until you're back on Home
+  toast('Updating to the latest version…', 3000);
+  setTimeout(() => location.reload(), 900);
+}
+setTimeout(checkForUpdate, 4000);
+setInterval(checkForUpdate, 5 * 60000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkForUpdate(); });
+addEventListener('popstate', () => setTimeout(applyUpdateWhenIdle, 600)); // returning to Home is the moment to update
+
 /* ---------- boot ---------- */
 const WALL_SPEED = 1; // the file is already slowed to 60% (600x600, 18 fps), so it plays at its native rate - cheaper to decode
 // some browsers reset the rate when the source (re)loads
