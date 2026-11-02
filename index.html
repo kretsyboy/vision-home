@@ -941,12 +941,18 @@ function focusKey(k){ const e = document.querySelector(`[data-k="${k}"]`); if(e)
    computer switches to 'mouse' mode, where clicks and hover-to-highlight follow the cursor. */
 let INPUT = matchMedia('(hover: hover) and (pointer: fine)').matches ? 'mouse' : 'keys';
 let MOUSE_AT = null;   // last cursor position, to tell a moving mouse from the glasses' resting pointer
-let PRE_FOCUS = null; // what was highlighted when the pointer went down (before the browser moves focus to it)
-document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; INPUT_GEN++; }, true);
+let PRE_FOCUS = null, PRE_AT = 0; // what was highlighted when the pointer went down, and when
+let LAST_ACT = 0;      // when the last pinch acted: one pinch can reach us twice (the band's select key and a pointer click)
+document.addEventListener('pointerdown', () => { PRE_FOCUS = document.activeElement; PRE_AT = performance.now(); INPUT_GEN++; }, true);
 document.addEventListener('mousedown', e => { if(INPUT === 'keys') e.preventDefault(); }, true); // keep the highlight where the swipes put it
 document.addEventListener('click', e => {
-  const pre = PRE_FOCUS && PRE_FOCUS !== document.body && PRE_FOCUS.isConnected ? PRE_FOCUS : document.activeElement;
+  // keys mode: act on what is highlighted on the layer you're looking at. The pointer-down memory is used only if it is
+  // fresh and on that layer, so a stale one (e.g. the Home icon hidden behind an open window) can never be pinched
+  const layer = V.cc ? ccEl : V.app ? winEl : homeEl, fresh = performance.now() - PRE_AT < 1000;
+  const pre = fresh && PRE_FOCUS && PRE_FOCUS.isConnected && layer.contains(PRE_FOCUS) ? PRE_FOCUS : document.activeElement;
+  PRE_FOCUS = null;
   const target = INPUT === 'keys' && e.detail > 0 ? pre : e.target;
+  if(INPUT === 'keys' && target && target.closest && target.closest('#home,#win,#cc') && !layer.contains(target)) return; // a control on a hidden layer
   if(INPUT === 'keys' && e.detail > 0 && target && target.focus) target.focus({ preventScroll:true });
   if(!target || !target.closest) return;
   const sl = target.closest('[data-slider]');
@@ -961,6 +967,7 @@ document.addEventListener('click', e => {
   const b = target.closest('[data-act]'); if(!b) return;
   const act = b.dataset.act, before = confirmKey;
   if(!ACT[act]) return;
+  const tNow = performance.now(); if(INPUT === 'keys' && tNow - LAST_ACT < 300) return; LAST_ACT = tNow; // same pinch, second copy
   playSound(soundFor(act, b.dataset.v));
   RENDERED = false;
   ACT[act](b.dataset.v, b);
