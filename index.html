@@ -48,6 +48,8 @@ svg{display:block}
    which makes the GPU mask the video and every layer on each frame */
 #stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
+/* no wallpaper behind the SiteVue AI intro: it fades in once the intro hands over to Home */
+#stage.booting #wall{opacity:0}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
 /* Transparency mode (--see 0/1) removes everything behind the apps (the wallpaper above and the logo outline), so only
    apps, buttons, icons and windows float over the real world; they stay fully visible */
@@ -296,7 +298,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 </style>
 </head>
 <body>
-<div id="stage">
+<div id="stage" class="booting">
   <video id="wall" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
   <div id="ui">
     <div id="home"></div>
@@ -1311,7 +1313,7 @@ Object.assign(ACT, {
 
 /* ---------- boot intro: the SiteVue AI logo pieces float in 3D, then assemble ---------- */
 function runIntro(){
-  if(WATCH !== null){ $('#boot').remove(); return; }
+  if(WATCH !== null){ $('#boot').remove(); $('#stage').classList.remove('booting'); return; }
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
   // 18 thin slices 1.2 px apart (same 21.6 px depth as before) with a smooth color ramp, so the sides read as one solid
@@ -1334,7 +1336,7 @@ function runIntro(){
   const finish = () => {
     if(done) return; done = true;
     timers.forEach(clearTimeout); removeEventListener('keydown', skip, true); boot.removeEventListener('click', skip);
-    boot.classList.add('out'); homeEl.classList.remove('boot');
+    boot.classList.add('out'); homeEl.classList.remove('boot'); $('#stage').classList.remove('booting'); wallPlay();
     if(!P.reduce) homeEl.querySelectorAll('.icon').forEach((e, i) => e.animate([{ opacity:0, scale:.6 }, { opacity:1, scale:1 }],
       { duration:480, delay:120 + i * 45, easing:'cubic-bezier(.2,.9,.25,1.12)', fill:'backwards' }));
     setTimeout(() => boot.remove(), 700);
@@ -1558,7 +1560,7 @@ const isLens = () => innerWidth <= 600 && innerHeight <= 600 && !(window.webkit 
 const wallMoves = () => P.wallMove != null ? P.wallMove : !isLens();
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
-  const freeDecoder = !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
+  const freeDecoder = $('#stage').classList.contains('booting') || !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
   if(freeDecoder){
     if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
     return;
