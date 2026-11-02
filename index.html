@@ -179,6 +179,9 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .showarr{display:grid;place-items:center;width:40px;height:40px;color:var(--ink-2)}
 .showarr svg{width:30px;height:30px;rotate:90deg}
 .showarr.r svg{rotate:-90deg}
+.vfreeze{position:absolute;z-index:5;border-radius:18px;object-fit:cover;pointer-events:none;transition:opacity .4s var(--ease)}
+.vfreeze.out{opacity:0}
+.reduce .vfreeze{transition:none}
 .showvid{display:block;width:100%;height:250px;object-fit:cover;border-radius:18px;flex:0 0 auto;background:#fff}
 .stimg{display:block;width:100%;height:104px;object-fit:cover;border-radius:18px;flex:0 0 auto;background:#fff}
 .sdet{font-size:1rem;line-height:1.4;color:var(--ink-2)}
@@ -736,7 +739,7 @@ Object.assign(VIEWS, {
     if(arg === 'step'){
       const i = t.cur, [sec, head, det, call, ppe, cure, img, vid] = SOP.steps[i]; prefetchStep(i + 1);
       return `<div class="trk"><span>${sec}</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
-        ${vid ? `<video class="stimg" src="${blobURL(vid)}"${img ? ` poster="${img}"` : ''} autoplay muted loop playsinline></video>` : img ? `<img class="stimg" src="${img}" alt="">` : ''}
+        ${vid ? `<video class="stimg" src="${blobURL(vid)}"${img ? ` poster="${img}"` : ''} autoplay muted playsinline></video>` : img ? `<img class="stimg" src="${img}" alt="">` : ''}
         <div class="sttl">${t.done[i] ? '✓ ' : ''}${head}</div><div class="sdet">${det}</div>
         ${ppe ? `<div class="chips">${ppe.map(x => `<span>${x}</span>`).join('')}</div>` : ''}
         ${call ? `<div class="call ${call[0] === 'CAUTION' ? 'caution' : ''}"><b>${call[0]}</b>${call[1]}</div>` : ''}
@@ -954,7 +957,7 @@ const ACT = {
   clockTab(v){ const st = { app:'clock', arg:v === 'world' ? undefined : v }; hReplace(st); V = st; },
   btOpen(v){ const st = { app:'settings', arg:v }; hPush(st); setView(st); },
   trainShow(){ SHOW.i = 0; SHOW.paused = false; const st = { app:'training', arg:'show' }; hPush(st); setView(st); },
-  showStep(v){ SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
+  showStep(v){ freezeFrame(curClip()); SHOW.i = (SHOW.i + +v + SOP.steps.length) % SOP.steps.length; SHOW.paused = false; },
   showPlay(){ // works on the clip in place (no redraw), so it pauses and resumes on the exact frame
     const vd = document.querySelector('.showvid'), b = document.querySelector('[data-k="sh-play"]'); SHOW.paused = !SHOW.paused;
     clearTimeout(SHOW.t);
@@ -970,8 +973,9 @@ const ACT = {
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; hPush(st); setView(st); },
   trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; hPush(st); setView(st); }, // back returns to the overview
   trainTick(v){ const [list, i] = v.split(':'), t = TR(); t[list][i] = !t[list][i]; save(); },
-  trainStep(v){ trainGo(TR().cur + +v); },
+  trainStep(v){ freezeFrame(curClip()); trainGo(TR().cur + +v); },
   trainDone(){
+    freezeFrame(curClip());
     const t = TR(); t.done[t.cur] = true;
     if(doneCount() >= SOP.steps.length || t.cur === SOP.steps.length - 1){ trainLeave(); const dn = { app:'training', arg:'done' }; hReplace(dn); setView(dn); speak('Training complete'); return; }
     let nx = t.cur + 1; while(nx < SOP.steps.length && t.done[nx]) nx++;
@@ -1047,6 +1051,28 @@ document.addEventListener('click', e => {
   const tapped = b.dataset.k && document.querySelector(`[data-k="${CSS.escape(b.dataset.k)}"]`);
   if(tapped && !P.reduce){ tapped.classList.remove('tap'); void tapped.offsetWidth; tapped.classList.add('tap'); }
 });
+/* smooth joins: a still copy of the current frame is laid over the video and fades out while the next clip (or the
+   same clip, restarting) plays underneath, so there's never a hard jump or a blank flash between animations */
+function freezeFrame(v){
+  if(!v || !v.videoWidth || !v.isConnected) return;
+  try {
+    const st = $('#stage'), sr = st.getBoundingClientRect(), k = sr.width / 600, r = v.getBoundingClientRect();
+    const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+    c.className = 'vfreeze';
+    Object.assign(c.style, { left:(r.left - sr.left) / k + 'px', top:(r.top - sr.top) / k + 'px', width:r.width / k + 'px', height:r.height / k + 'px' });
+    st.appendChild(c);
+    let done = false; const fade = () => { if(done) return; done = true; c.classList.add('out'); setTimeout(() => c.remove(), 450); };
+    setTimeout(() => { const nv = $('.showvid') || $('video.stimg'); if(nv && nv.readyState < 2) nv.addEventListener('playing', fade, { once:true }); else fade(); setTimeout(fade, 900); }, 30);
+  } catch(e){}
+}
+const curClip = () => $('.showvid') || $('video.stimg');
+document.addEventListener('ended', e => {
+  const sv = e.target;
+  if(sv.classList && sv.classList.contains('stimg')){ // a step's clip: hold the assembled result, then blend back to the start
+    setTimeout(() => { if(!sv.isConnected) return; freezeFrame(sv); sv.currentTime = 0; sv.play().catch(() => {}); }, 1200);
+    return;
+  }
+}, true);
 document.addEventListener('ended', e => {
   const vd = e.target; if(!vd.dataset || vd.dataset.show == null) return;
   clearTimeout(SHOW.t);
