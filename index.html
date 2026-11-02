@@ -424,7 +424,7 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
   { id:'tips', name:'Tips', bg:['#d0caff','#9a8cf0'] },         // lilac
   { id:'settings', name:'Settings', bg:['#4a56b8','#161b4a'] }, // midnight navy
 ];
-const appBg = id => APPS.find(a => a.id === id).bg;
+const appBg = id => (THEME && THEME[id]) || APPS.find(a => a.id === id).bg; // a photo wallpaper re-colors the apps
 const CITY_LL = { 'Franklin, TN':[35.925,-86.869], 'New York':[40.71,-74.01], 'Chicago':[41.88,-87.63], 'Denver':[39.74,-104.99], 'Phoenix':[33.45,-112.07],
   'Los Angeles':[34.05,-118.24], 'Anchorage':[61.22,-149.9], 'Honolulu':[21.31,-157.86], 'Toronto':[43.65,-79.38], 'Mexico City':[19.43,-99.13],
   'São Paulo':[-23.55,-46.63], 'London':[51.51,-0.13], 'Paris':[48.86,2.35], 'Berlin':[52.52,13.4], 'Dubai':[25.2,55.27], 'Mumbai':[19.08,72.88],
@@ -593,7 +593,7 @@ function gridHTML(){
   }
   const pos = ring(APPS); // a true circle, evenly spaced from 12 o'clock, Clock In in the middle
   return APPS.map(a => `<button class="icon${a.id === CENTER ? ' hero' : ''}" style="${at(pos[a.id], a.id === CENTER)}" data-k="app-${a.id}" data-act="app" data-v="${a.id}" ${a.id === (CENTER || APPS[0].id) ? 'data-default' : ''} aria-label="${a.name}">
-      ${a.id === CENTER ? discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id) + `<b>${a.name}</b>`) : discHTML(a.bg[0], a.bg[1], a.ink, svg(a.id)) + `<span class="nm">${a.name}</span>`}</button>`).join('');
+      ${a.id === CENTER ? discHTML(...appBg(a.id), a.ink, svg(a.id) + `<b>${a.name}</b>`) : discHTML(...appBg(a.id), a.ink, svg(a.id)) + `<span class="nm">${a.name}</span>`}</button>`).join('');
 }
 function statusHTML(){
   const d = new Date();
@@ -1687,7 +1687,7 @@ const PHOTO = { client:null, code:'', state:'off' };
 const wallPhoto = () => { try { return localStorage.getItem(PHOTO_KEY) || ''; } catch(e){ return ''; } };
 function setWallPhoto(dataURL){
   try { if(dataURL) localStorage.setItem(PHOTO_KEY, dataURL); else localStorage.removeItem(PHOTO_KEY); } catch(e){ toast('Not enough space for that photo'); return; }
-  showWallPhoto(); wallPlay();
+  showWallPhoto(); wallPlay(); refreshTheme();
 }
 function showWallPhoto(){
   const u = wallPhoto(), el = $('#wallimg');
@@ -1768,6 +1768,67 @@ function setupPhotoSend(){
   });
 }
 
+/* ---------- app colors from the wallpaper ----------
+   With the SiteVue wallpaper the apps keep the brand colors above. With your own photo, its main colors are found
+   (k-means on a 48 x 48 copy), and each app gets one as a light-to-deep gradient: the most common color goes to
+   Clock In, the rest around the wheel, varying lightness when the photo has only a few colors (a black, gray and red
+   Darth Vader gives reds, grays and charcoals). Every color is kept bright enough to show on the lens (pure black is
+   see-through there) and dark enough for the white icon art. */
+const THEME_KEY = 'sitevue-ar-wallphoto-theme';
+let THEME = null; // { id: [light, deep] } for a photo, or null for the brand colors
+function rgb2hsl(r, g, b){
+  r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if(mx !== mn){ const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [h, s * 100, l * 100];
+}
+const hsl = (h, s, l) => `hsl(${Math.round(h)} ${Math.round(s)}% ${Math.round(l)}%)`;
+function photoTheme(dataURL){
+  return new Promise(ok => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = c.height = 48; const g = c.getContext('2d'); g.drawImage(img, 0, 0, 48, 48);
+      const d = g.getImageData(0, 0, 48, 48).data, px = [];
+      for(let i = 0; i < d.length; i += 4) px.push([d[i], d[i + 1], d[i + 2]]);
+      // k-means, 6 colors, seeded across the brightness range
+      const sorted = px.slice().sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+      let cs = Array.from({ length:6 }, (_, k) => sorted[Math.floor((k + .5) / 6 * sorted.length)].slice());
+      let groups = [];
+      for(let it = 0; it < 10; it++){
+        groups = cs.map(() => []);
+        for(const p of px){ let bi = 0, bd = Infinity; cs.forEach((q, k) => { const dd = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2; if(dd < bd){ bd = dd; bi = k; } }); groups[bi].push(p); }
+        cs = groups.map((gr, k) => gr.length ? [0, 1, 2].map(j => gr.reduce((a, p) => a + p[j], 0) / gr.length) : cs[k]);
+      }
+      // most common first; vivid colors get a boost so a red accent isn't lost among large gray areas
+      const ranked = cs.map((q, k) => { const [h, s, l] = rgb2hsl(...q); return { h, s, l, w:groups[k].length * (1 + s / 60) }; })
+        .filter(x => x.w > 0).sort((a, b) => b.w - a.w);
+      const order = [CENTER, ...APPS.map(a => a.id).filter(id => id !== CENTER)], out = {};
+      const used = [];
+      const shifts = [0, 10, -8, 18, -14, 6, 24, -4, 14]; // lightness variety when colors repeat
+      order.forEach((id, i) => {
+        const b = ranked[i % ranked.length], round = Math.floor(i / ranked.length);
+        const s = Math.min(b.s, 85) * (b.s < 12 ? 1 : .95);
+        let deep = clamp(b.l * .7 + shifts[i] * (round ? 1 : .4), 22, 46);   // visible on the lens, dark enough for white art
+        // two apps never share a color: a repeat steps brighter (or darker at the top of the range)
+        for(let tries = 0; tries < 6 && used.some(u => Math.abs(u[0] - b.h) < 12 && Math.abs(u[1] - deep) < 5); tries++) deep = deep + 7 > 46 ? deep - 13 : deep + 7;
+        deep = clamp(deep, 22, 46); used.push([b.h, deep]);
+        const light = clamp(deep + 26, 48, 80);
+        out[id] = [hsl(b.h, Math.min(s + 6, 90), light), hsl(b.h, s, deep)];
+      });
+      ok(out);
+    };
+    img.onerror = () => ok(null);
+    img.src = dataURL;
+  });
+}
+function loadTheme(){ try { THEME = wallPhoto() ? JSON.parse(localStorage.getItem(THEME_KEY) || 'null') : null; } catch(e){ THEME = null; } }
+async function refreshTheme(){
+  const u = wallPhoto();
+  THEME = u ? await photoTheme(u) : null;
+  try { if(THEME) localStorage.setItem(THEME_KEY, JSON.stringify(THEME)); else localStorage.removeItem(THEME_KEY); } catch(e){}
+  render();
+}
+
 /* ---------- boot ---------- */
 const WALL_SPEED = 1; // the file is already slowed to 60% (600x600, 18 fps), so it plays at its native rate - cheaper to decode
 // some browsers reset the rate when the source (re)loads
@@ -1816,6 +1877,7 @@ function startVideos(root){
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
 history.replaceState({}, '');
+loadTheme();
 render(true);
 runIntro();
 showWallPhoto();

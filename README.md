@@ -84,4 +84,5 @@ Use your own picture behind the apps.
 
 - **From your iPhone (for the glasses):** on the glasses, **Settings → Wallpaper photo → Get a photo from my iPhone** shows a code. On the iPhone, open **kretsyboy.github.io/vision-home/photo**, enter the code, choose a photo from Photos and tap **Send to glasses**. It's squared to 600 × 600 and sent encrypted (the same way as mirroring, on its own channel); it's removed from the relay once the glasses have it.
 - **On a phone or computer:** **Choose a photo on this device** picks one directly.
+- **App colors follow the wallpaper:** with a photo, the apps take its main colors (a dark red-and-gray photo gives reds, grays and charcoals), kept bright enough to show on the lens and distinct from each other. With the SiteVue wallpaper they use the brand colors.
 - **Use the SiteVue wallpaper** switches back. The Wallpaper brightness and Transparency settings apply to photos too.
