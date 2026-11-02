@@ -1821,7 +1821,10 @@ function photoTheme(dataURL){
     img.src = dataURL;
   });
 }
-function loadTheme(){ try { THEME = wallPhoto() ? JSON.parse(localStorage.getItem(THEME_KEY) || 'null') : null; } catch(e){ THEME = null; } }
+function loadTheme(){
+  try { THEME = wallPhoto() ? JSON.parse(localStorage.getItem(THEME_KEY) || 'null') : null; } catch(e){ THEME = null; }
+  if(wallPhoto() && !THEME) refreshTheme(); // a photo saved before its colors were (e.g. sent to an older version): work them out now
+}
 async function refreshTheme(){
   const u = wallPhoto();
   THEME = u ? await photoTheme(u) : null;
