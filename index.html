@@ -892,7 +892,10 @@ function pairHTML(arg){
 /* ---------- live updates (4 Hz; the display runs at 30 Hz) ---------- */
 function tick(){
   const d = new Date();
-  if(P.timer.end && now() >= P.timer.end){ P.timer.end = null; P.timer.left = null; save(); ringStart(); if(V.app === 'clock' && V.arg === 'timer') render(); }
+  if(P.timer.end && now() >= P.timer.end){
+    const late = now() - P.timer.end, at = new Date(P.timer.end); P.timer.end = null; P.timer.left = null; save();
+    // finished while the app was closed or asleep: a quiet note instead of a sudden ring
+    if(late > 60000) toast('Timer finished at ' + fmtTime(at), 4000); else ringStart(); if(V.app === 'clock' && V.arg === 'timer') render(); }
   set('status', statusHTML(), true);
   set('ccTime', fmtTime(d)); set('ccDate', fmtDate(d)); set('clockBig', fmtTime(d)); set('clockDate', fmtDate(d));
   document.querySelectorAll('[data-live-tz]').forEach(e => { const t = fmtTime(d, e.dataset.liveTz); if(e.textContent !== t) e.textContent = t; });
@@ -1250,6 +1253,7 @@ function ringPhrase(){
   RING.t = setTimeout(ringPhrase, 1500);
 }
 function ringStart(){
+  if(WATCH !== null) return; // the glasses ring; a computer that's only watching stays quiet (it can't be silenced)
   ringStop(); RING.on = true; RING.until = now() + 60000;
   toast('Timer done · pinch to stop', 60000);
   ringPhrase();
