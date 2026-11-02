@@ -645,7 +645,13 @@ function blobURL(d){
     u = URL.createObjectURL(new Blob([a], { type:hd.slice(5).split(';')[0] })); BLOBS.set(d, u); }
   return u;
 }
-const SHOW = { i:0, paused:false, t:0 };           // "Watch the assembly" slideshow
+const SHOW = { i:0, paused:false, t:0 };
+// fetch the next step's picture and animation in the background, so moving on is instant
+const PREFETCHED = new Set();
+function prefetchStep(i){
+  const st = SOP.steps[i]; if(!st) return;
+  for(const u of [st[6], st[7]]) if(u && !u.startsWith('data:') && !PREFETCHED.has(u)){ PREFETCHED.add(u); fetch(u).catch(() => PREFETCHED.delete(u)); }
+}           // "Watch the assembly" slideshow
 const hasVideo = () => SOP.steps.some(st => st[7]);
 const chk = on => `<span class="chk ${on ? 'on' : ''}">${on ? svg('check') : ''}</span>`;
 
@@ -675,7 +681,7 @@ Object.assign(VIEWS, {
         <button class="btn primary" data-k="tr-home" data-act="close" data-default>Done</button></div>`;
     }
     if(arg === 'show'){
-      const i = SHOW.i, st = SOP.steps[i];
+      const i = SHOW.i, st = SOP.steps[i]; prefetchStep((i + 1) % n);
       return `<div class="trk"><span>Assembly animation</span><span class="bar"><i style="width:${(100 * (i + 1) / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
         <video class="showvid" data-show="${i}" src="${blobURL(st[7])}"${st[6] ? ` poster="${st[6]}"` : ''} ${SHOW.paused ? '' : 'autoplay'} muted playsinline></video>
         <div class="sttl" style="font-size:1.25rem">${st[1]}</div>
@@ -684,7 +690,7 @@ Object.assign(VIEWS, {
           <button class="btn" data-k="sh-next" data-act="showStep" data-v="1">▶</button></div>`;
     }
     if(arg === 'step'){
-      const i = t.cur, [sec, head, det, call, ppe, cure, img, vid] = SOP.steps[i];
+      const i = t.cur, [sec, head, det, call, ppe, cure, img, vid] = SOP.steps[i]; prefetchStep(i + 1);
       return `<div class="trk"><span>${sec}</span><span class="bar"><i style="width:${(100 * d / n).toFixed(1)}%"></i></span><span>${i + 1}/${n}</span></div>
         ${vid ? `<video class="stimg" src="${blobURL(vid)}"${img ? ` poster="${img}"` : ''} autoplay muted loop playsinline></video>` : img ? `<img class="stimg" src="${img}" alt="">` : ''}
         <div class="sttl">${t.done[i] ? '✓ ' : ''}${head}</div><div class="sdet">${det}</div>
