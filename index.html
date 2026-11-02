@@ -426,9 +426,9 @@ const APPS = [ // SiteVue brand colors (navy, electric indigo, violet-blue, peri
 ];
 // App colors (Settings): 'chief' = the Master Chief palette, 'match' = from the wallpaper photo, 'brand' = SiteVue
 const PALETTES = {
-  chief:{ // Spartan armor greens, visor gold and bronze, gunmetal, steel and the black undersuit
-    clockin:['#93a663','#4b5b32'], clock:['#f2cf6e','#b8862e'], weather:['#a8b56f','#5f7342'], training:['#9aa1aa','#4a5058'],
-    tasks:['#e9b26a','#9a5f22'], notes:['#7e9358','#2f3a22'], calc:['#6c7078','#26282c'], tips:['#cdc68e','#77723f'], settings:['#b7bcc3','#666c75'] },
+  chief:{ // Spartan armor greens and visor oranges, with gunmetal and steel; vivid so they read as green and orange on the lens, not brown
+    clockin:['#8fd14f','#3f8a1f'], clock:['#ffb347','#e0640f'], weather:['#b4e36e','#5f9e2a'], training:['#ffcf5c','#d98a0d'],
+    tasks:['#6fc24a','#2f6e1c'], notes:['#ff9a4d','#c94f12'], calc:['#a0a8b2','#4a525c'], tips:['#c6ef8a','#73b032'], settings:['#ffbf73','#e07a1f'] },
 };
 const appColors = () => P.appColors || 'chief';
 const appBg = id => { const m = appColors(), pal = PALETTES[m];
