@@ -136,6 +136,8 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .winbar .close svg{width:22px;height:22px}
 .winbar .grab{width:170px;height:48px;border-radius:24px;display:grid;place-items:center}
 .winbar .grab i{display:block;width:130px;height:10px;border-radius:5px;background:rgba(255,255,255,.42)}
+.winbar .grab{cursor:grab}
+.winbar .grab:active{cursor:grabbing}
 .winbar .grab.moving i{background:var(--accent);box-shadow:0 0 18px var(--accent)}
 .row2{display:flex;gap:10px}
 .btn{min-height:58px;border-radius:29px;padding:0 24px;font-weight:600;font-size:1.1rem;background:var(--glass-2);
@@ -1030,6 +1032,7 @@ document.addEventListener('click', e => {
   if(INPUT === 'keys' && target && target.closest && target.closest('#home,#win,#cc') && !layer.contains(target)) return; // a control on a hidden layer
   if(INPUT === 'keys' && e.detail > 0 && target && target.focus) target.focus({ preventScroll:true });
   if(!target || !target.closest) return;
+  if(performance.now() - DRAGGED_AT < 400) return;
   const sl = target.closest('[data-slider]');
   if(sl && e.detail > 0 && INPUT === 'mouse'){ // mouse click on a track sets the value directly (desktop testing)
     const t = sl.querySelector('.track').getBoundingClientRect();
@@ -1127,11 +1130,12 @@ document.addEventListener('keydown', e => {
 });
 function nudge(dx, dy){
   const s = winEl.style, x = parseFloat(s.getPropertyValue('--wx')) || 0, y = parseFloat(s.getPropertyValue('--wy')) || 0;
-  s.setProperty('--wx', clamp(x + dx, -30, 30) + 'px'); s.setProperty('--wy', clamp(y + dy, -22, 30) + 'px');
+  s.setProperty('--wx', clamp(x + dx, -80, 80) + 'px'); s.setProperty('--wy', clamp(y + dy, -22, 30) + 'px');
+  if(MIRROR.client) mirrorPush();
 }
 function moveFocus([dx, dy]){
   // the Training slideshow: left/right swipes change the step (the arrows beside Play/Pause show it); up/down move as usual
-  if(dx && V.app === 'training' && V.arg === 'show'){ ACT.showStep(dx); playSound('click'); render(); return; }
+  if(dx && V.app === 'training' && V.arg === 'show' && !(document.activeElement && document.activeElement.closest('.winbar'))){ ACT.showStep(dx); playSound('click'); render(); return; }
   const scope = V.cc ? ccEl : V.app ? winEl : homeEl, items = focusables(scope);
   const cur = items.includes(document.activeElement) ? document.activeElement : null;
   if(!cur){ const d = scope.querySelector('[data-default]') || items[0]; d && d.focus({ preventScroll:true }); return; }
@@ -1166,7 +1170,9 @@ function center(el){ const r = (el.querySelector('.disc') || el).getBoundingClie
 let drag = null;
 document.addEventListener('pointerdown', e => {
   if(e.pointerType !== 'mouse') BAND.last = now();
-  drag = { x:e.clientX, y:e.clientY, ax:0, ay:0, type:e.pointerType };
+  const a = document.activeElement, onBar = e.target.closest && e.target.closest('.winbar .grab');
+  drag = { x:e.clientX, y:e.clientY, ax:0, ay:0, type:e.pointerType, moved:0,
+    win:!!V.app && !!(onBar || (INPUT === 'keys' && a && a.classList && a.classList.contains('grab'))) };
   if(e.pointerType !== 'mouse') try { document.body.setPointerCapture(e.pointerId); } catch(_){}
 });
 document.addEventListener('pointermove', e => {
@@ -1184,6 +1190,7 @@ document.addEventListener('pointermove', e => {
   }
   const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
   const a = document.activeElement;
+  if(drag.win){ drag.moved += Math.abs(dx) + Math.abs(dy); nudge(dx, dy); return; }
   if(moving) return nudge(dx, dy);
   if(drag.type === 'mouse') return;
   if(a && a.dataset.slider){ const s = SL[a.dataset.slider]; s.set(clamp(s.get() + dx / 300, s.min, s.max || 1)); apply(); updSlider(a); return; }
@@ -1191,7 +1198,8 @@ document.addEventListener('pointermove', e => {
   if(Math.abs(drag.ax) > 70){ moveFocus([Math.sign(drag.ax), 0]); drag.ax = drag.ay = 0; }
   else if(Math.abs(drag.ay) > 70){ moveFocus([0, Math.sign(drag.ay)]); drag.ax = drag.ay = 0; }
 });
-addEventListener('pointerup', () => { if(drag && document.activeElement && document.activeElement.dataset.slider) save(); drag = null; });
+let DRAGGED_AT = 0; // a drag on the window bar ends without also toggling Move mode
+addEventListener('pointerup', () => { if(drag && drag.win && drag.moved > 6) DRAGGED_AT = performance.now(); if(drag && document.activeElement && document.activeElement.dataset.slider) save(); drag = null; });
 addEventListener('pointercancel', () => drag = null);
 function updSlider(el){ const v = Math.round(SL[el.dataset.slider].get() * 100); el.querySelector('.track i').style.width = v + '%'; el.querySelector('.sl-v').textContent = v + '%'; }
 
