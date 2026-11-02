@@ -49,8 +49,8 @@ svg{display:block}
 #stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 #wall.under{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
-/* Transparency (--see) fades only the wallpaper (rules above), so the outside world shows through behind the apps,
-   which stay fully visible; at 100% the wallpaper is gone and the lens is clear behind them */
+/* Transparency mode (--see 0/1) removes everything behind the apps (the wallpaper above and the logo outline), so only
+   apps, buttons, icons and windows float over the real world; they stay fully visible */
 #ui{position:absolute;inset:0;opacity:var(--bright);transition:opacity .2s}
 .glass{background:linear-gradient(180deg,var(--glass-a),var(--glass-b));border:1px solid var(--edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
@@ -80,7 +80,7 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .tab:focus .lbl{opacity:1;scale:1}
 .icon{position:absolute;width:96px;display:flex;flex-direction:column;align-items:center;gap:14px;border-radius:50%}
 .icon:focus{box-shadow:none}
-.markbg{position:absolute;pointer-events:none;fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.12);stroke-width:2}
+.markbg{position:absolute;pointer-events:none;fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.12);stroke-width:2;opacity:calc(1 - var(--see,0));transition:opacity .4s var(--ease)}
 .icon.hero{width:136px}
 .icon.hero .disc{width:136px;height:136px}
 .icon.hero .fg{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
@@ -148,10 +148,10 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .lrow b{font-weight:600}
 .lrow .r{color:var(--ink-2);text-align:right;white-space:nowrap}
 .lrow .sw{width:26px;height:26px;border-radius:50%}
-.lrow .tog{width:52px;height:32px;border-radius:16px;background:rgba(255,255,255,.2);position:relative;flex:0 0 auto}
-.lrow .tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .2s var(--spring)}
-.lrow .tog.on{background:#30d158}
-.lrow .tog.on::after{left:23px}
+.tog{width:52px;height:32px;border-radius:16px;background:rgba(255,255,255,.2);position:relative;flex:0 0 auto}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:left .2s var(--spring)}
+.tog.on{background:#30d158}
+.tog.on::after{left:23px}
 .spin{display:flex;align-items:center;justify-content:space-between;min-height:62px;padding:0 20px;border-radius:31px;
   background:var(--glass-2);font-size:1.2rem;font-weight:600;width:100%}
 .spin .ar{color:var(--ink-3);font-size:1.1rem}
@@ -315,6 +315,7 @@ const DEF = { accent:'#64d2ff', ts:1, bright:1, reduce:false, dnd:false, clicks:
 const P = Object.assign({}, DEF, load());
 if(P.tab !== 'people') P.tab = 'apps'; // older saves may point at the removed Environments tab
 if(P.wallV !== 2){ P.wall = .7; P.wallV = 2; }
+P.see = P.see >= .5 ? 1 : 0; // Transparency is an on/off mode now
 if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
@@ -561,7 +562,7 @@ function ccHTML(){
     <div class="cchead"><div><div class="cctime" data-live="ccTime">${fmtTime(d)}</div><div class="sub" data-live="ccDate">${fmtDate(d)}</div></div>
       <div class="sub bat">${BAT ? batSvg(BAT.level) + Math.round(BAT.level * 100) + '%' : ''}</div></div>
     ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
-    ${sliderHTML('see', 'Transparency', 'eye', P.see)}
+    <button class="slider" data-k="t-see" data-act="tile" data-v="see" aria-pressed="${!!P.see}">${svg('eye')}<span class="sl-l">Transparency</span><span style="flex:1"></span><span class="tog ${P.see ? 'on' : ''}"></span></button>
     <div class="tiles">
       ${tile('dnd', 'Do Not<br>Disturb', 'moon', P.dnd)}${tile('reduce', 'Reduce<br>Motion', 'motion', P.reduce)}${tile('recenter', 'Recenter', 'recenter')}
       ${tile('settings', 'Settings', 'settings')}${tile('tips', 'Tips', 'tips')}
@@ -790,7 +791,7 @@ Object.assign(VIEWS, {
         <button class="lrow" data-k="s-ts" data-spin="ts"><b>Text size</b><span class="r">◀ ${ts[0]} ▶</span></button>
         ${sliderHTML('bright', 'Brightness', 'sun', P.bright)}
         ${sliderHTML('wall', 'Wallpaper', 'motion', P.wall)}
-        ${sliderHTML('see', 'Transparency', 'eye', P.see)}
+        <button class="lrow" data-k="s-see" data-act="tile" data-v="see"><b>Transparency</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">hides the background</span><span class="tog ${P.see ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-wallmove" data-act="tile" data-v="wallmove"><b>Moving wallpaper</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">${isLens() ? 'off is smoother' : ''}</span><span class="tog ${wallMoves() ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-clicks" data-act="tile" data-v="clicks"><b>Click sounds</b><span class="tog ${P.clicks ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce Motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
@@ -885,6 +886,7 @@ const ACT = {
   tile(v){
     if(v === 'dnd'){ P.dnd = !P.dnd; toast(P.dnd ? 'Do Not Disturb on' : 'Do Not Disturb off'); }
     if(v === 'reduce'){ P.reduce = !P.reduce; }
+    if(v === 'see'){ P.see = P.see ? 0 : 1; toast(P.see ? 'Transparency on' : 'Transparency off'); }
     if(v === 'wallmove'){ P.wallMove = !wallMoves(); }
     if(v === 'clicks'){ P.clicks = !P.clicks; if(P.clicks) playSound('click'); }
     if(v === 'recenter'){ $('#win').style.setProperty('--wx', '0px'); $('#win').style.setProperty('--wy', '0px'); P.tab = 'apps'; restore.apps = 'app-clock'; back(); toast('Recentered'); }
@@ -1341,7 +1343,7 @@ const isLens = () => innerWidth <= 600 && innerHeight <= 600 && !(window.webkit 
 const wallMoves = () => P.wallMove != null ? P.wallMove : !isLens();
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
-  const freeDecoder = !wallMoves() || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
+  const freeDecoder = !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
   if(freeDecoder){
     if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
     return;
