@@ -262,6 +262,22 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 #boot .wh.on{opacity:1}
 #home.boot{opacity:0}
 
+/* ---------- mirroring ---------- */
+.mirr{color:#ff6b6b;font-weight:700}
+.mcode{font:700 2.6rem/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;padding:8px 18px;border-radius:18px;background:rgba(255,255,255,.1)}
+.watching #help{display:none!important}
+.watching #stage{scale:var(--vz,1)}
+.watching{padding-top:44px}
+#watchbar{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:14px;padding:10px 18px;font-size:14px;
+  background:#111317;color:#ddd;border-bottom:1px solid #2a2d33;flex-wrap:wrap}
+#watchbar .wdot{width:9px;height:9px;border-radius:50%;background:#777}
+#watchbar.live .wdot{background:#ff4d4d;box-shadow:0 0 8px #ff4d4d}
+#watchbar .ws{color:#9aa}
+#watchbar form{display:flex;gap:8px}
+#watchbar input{background:#1d2026;border:1px solid #3a3f47;border-radius:8px;height:32px;padding:0 10px;font:600 14px ui-monospace,Menlo,monospace;color:#fff;letter-spacing:.06em;width:130px;cursor:text}
+#watchbar button{background:#4c52f9;color:#fff;border-radius:8px;height:32px;padding:0 14px;font-weight:600}
+#watchwait{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,.72);color:#ccd;font-size:1.05rem}
+
 /* ---------- toast ---------- */
 #toast{position:absolute;top:14px;left:50%;translate:-50% -80px;padding:12px 22px;border-radius:26px;font-size:1.05rem;
   font-weight:600;white-space:nowrap;z-index:9;transition:translate .35s var(--spring),opacity .25s;opacity:0;pointer-events:none;
@@ -307,6 +323,10 @@ const $ = s => document.querySelector(s);
 const h = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const now = () => Date.now();
+// ?watch=CODE: this page is a viewer mirroring someone's glasses (see "Mirror to a computer"); ?watch alone asks for the code
+const WATCH = (() => { const m = location.search.match(/[?&]watch(?:=([^&]*))?/); return m ? decodeURIComponent(m[1] || '').toUpperCase().replace(/[^A-Z0-9]/g, '') : null; })();
+if(WATCH !== null) for(const t of ['keydown','keyup','click','pointerdown','pointerup','pointermove','mousedown','wheel','input','touchstart'])
+  addEventListener(t, e => { if(!(e.target.closest && e.target.closest('#watchbar'))){ e.stopImmediatePropagation(); if(t !== 'pointermove') e.preventDefault(); } }, true);
 
 /* ---------- persisted state (glasses localStorage, 5 MB) ---------- */
 const KEY = 'sitevue-ar-home-v1';
@@ -319,7 +339,7 @@ P.see = P.see >= .5 ? 1 : 0; // Transparency is an on/off mode now
 if(P.brightV !== 2){ if(P.bright === .9) P.bright = 1; P.brightV = 2; } // old default; 100% avoids a costly full-screen blend
 function load(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let saveT;
-function save(){ clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
+function save(){ if(WATCH !== null) return; clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch(e){} }, 120); }
 
 /* ---------- glyphs ---------- */
 const G = {
@@ -458,6 +478,7 @@ function render(fresh){
   const want = keep || (!V.app && !V.cc && restore[P.tab]);
   let el = want && scope.querySelector(`[data-k="${CSS.escape(want)}"]`);
   if(!el) el = scope.querySelector('[data-default]') || focusables(scope)[0];
+  if(MIRROR.client && WATCH === null) mirrorPush();
   if(el){ el.focus({ preventScroll:true }); if(el.closest('.list')) el.scrollIntoView({ block:'nearest' });
     const gen = INPUT_GEN;
     for(const ms of [0, 60, 200]) setTimeout(() => { if(gen === INPUT_GEN && el.isConnected && document.activeElement !== el) el.focus({ preventScroll:true }); }, ms);
@@ -537,6 +558,7 @@ function statusHTML(){
   if(BAT) s += `<span class="sep"></span><span class="bat">${batSvg(BAT.level)}${Math.round(BAT.level * 100)}%</span>`;
   if(P.timer.end) s += `<span class="sep"></span><span class="live">${fmtDur(P.timer.end - now())}</span>`;
   else if(P.sw.start) s += `<span class="sep"></span><span class="live">${fmtDur(swElapsed())}</span>`;
+  if(P.mirror && P.mirror.on && WATCH === null) s += `<span class="sep"></span><span class="mirr">● Mirroring</span>`;
   if(P.dnd) s += `<span class="sep"></span><span class="bat" style="color:#b49cff">${svg('moon')}</span>`;
   return s;
 }
@@ -783,10 +805,22 @@ Object.assign(VIEWS, {
   },
   settings(arg){
     if(arg === 'bt') return btHTML();
+    if(arg === 'mirror'){
+      const on = P.mirror && P.mirror.on;
+      if(!on) return `<div class="eyebrow">Settings</div><div class="title">Mirror to a computer</div>
+        <div class="sub" style="font-size:1rem">Show what you see in these glasses, live, on any computer: Windows, Mac or Linux, in a web browser. Everything is encrypted with a one-time code before it leaves the glasses.</div>
+        <button class="btn primary" data-k="mi-start" data-act="mirrorOn" data-default style="flex:0 0 auto;margin-top:auto">Start mirroring</button>`;
+      return `<div class="eyebrow">Mirroring · <span class="mirr">on</span></div>
+        <div class="center" style="gap:6px;flex:0 0 auto"><div class="sub">On the computer, open</div><div class="title" style="font-size:1.25rem">kretsyboy.github.io/vision-home/watch</div>
+        <div class="sub">and enter</div><div class="mcode">${fmtCode(P.mirror.code)}</div><div class="sub" data-live="mirrorStatus">${mirrorStatusText()}</div></div>
+        <div class="row2" style="margin-top:auto;flex:0 0 auto"><button class="btn danger" data-k="mi-stop" data-act="mirrorOff">Stop mirroring</button>
+          <button class="btn primary" data-k="mi-done" data-act="close" data-default>Done</button></div>`;
+    }
     if(arg === 'pair-glasses' || arg === 'pair-band') return pairHTML(arg);
     const acc = ACCENTS.find(a => a[1] === P.accent) || ACCENTS[0], ts = TEXT.find(t => t[1] === P.ts) || TEXT[1];
     return `<div class="eyebrow">Settings</div>
       <div class="list">
+        <button class="lrow" data-k="s-mirror" data-act="btOpen" data-v="mirror"><b>Mirror to a computer</b><span class="r">${P.mirror && P.mirror.on ? '<span class="mirr">On</span>' : 'Off'} ›</span></button>
         <button class="lrow" data-k="s-bt" data-act="btOpen" data-v="bt" data-default><b>Bluetooth Devices</b><span class="r" data-live="btSummary">${btSummary()} ›</span></button>
         <button class="lrow" data-k="s-accent" data-spin="accent"><b>Accent color</b><span class="r" style="display:flex;gap:10px;align-items:center">◀ ${acc[0]} <i class="sw" style="background:${acc[1]}"></i> ▶</span></button>
         <button class="lrow" data-k="s-ts" data-spin="ts"><b>Text size</b><span class="r">◀ ${ts[0]} ▶</span></button>
@@ -862,6 +896,7 @@ function tick(){
   if(V.app === 'clock' && V.arg === 'stopwatch') set('sw', fmtDur(swElapsed(), true));
   if(V.app === 'clockin' && !V.arg){ const u = PU(); set('punchState', punchState()); set('punchTime', fmtDur(workedNow())); if(u.in) set('punchBrk', 'Break ' + fmtDur(brkMs())); set('punchTotals', `Today ${hrs(workedSince(dayStart()))} · Week ${hrs(workedSince(weekStart()))} ›`); }
   if(V.app === 'training' && V.arg === 'step'){ const t = TR(); set('trtime', 'On this step ' + fmtDur(now() - (t.stepAt || now()))); if(t.cure) set('cure', cureText()); }
+  if(V.app === 'settings' && V.arg === 'mirror') set('mirrorStatus', mirrorStatusText());
   if(V.app === 'settings'){ set('st-glasses', stHTML(glassesState()), true); set('st-band', stHTML(bandState()), true); set('btSummary', btSummary() + ' ›'); }
 }
 const q = k => document.querySelector(`[data-live="${k}"]`);
@@ -907,6 +942,8 @@ const ACT = {
     if(b) b.textContent = SHOW.paused ? 'Play' : 'Pause';
     winEl._html = winHTML(); RENDERED = true; // the page now matches the new state: skip the click handler's redraw
   },
+  mirrorOn(){ mirrorStart(mirrorCode()); },
+  mirrorOff(){ mirrorStopLink(); P.mirror = { on:false }; save(); toast('Mirroring stopped'); },
   trRetry(){ TRLOAD.failed = false; loadTraining(); },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; history.pushState(st, ''); setView(st); },
   trainOpen(v){ if(v === 'step') trainGo(TR().cur); const st = { app:'training', arg:v }; history.pushState(st, ''); setView(st); }, // back returns to the overview
@@ -1122,6 +1159,7 @@ const soundFor = (act, v) => act === 'tkToggle' && (P.tasks.find(x => x.id === v
 
 /* ---------- helpers for apps ---------- */
 function speak(text, force){
+  if(WATCH !== null) return;
   if((P.dnd && !force) || !('speechSynthesis' in window)) return;
   try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch(e){}
 }
@@ -1273,6 +1311,7 @@ Object.assign(ACT, {
 
 /* ---------- boot intro: the SiteVue AI logo pieces float in 3D, then assemble ---------- */
 function runIntro(){
+  if(WATCH !== null){ $('#boot').remove(); return; }
   const boot = $('#boot'), K = 480 / 3526, pcs = boot.querySelector('.pcs'), all = LOGO.map(p => p[4]).join('');
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
   // 18 thin slices 1.2 px apart (same 21.6 px depth as before) with a smooth color ramp, so the sides read as one solid
@@ -1333,6 +1372,168 @@ function runIntro(){
   timers.push(setTimeout(finish, assembled + SWEEP_MS + HOLD_MS)); // linger on the white logo, then go to Home
 }
 
+/* ---------- Mirror to a computer ----------
+   The glasses can't capture their screen, so they send what is on it instead: which screen is open, what is
+   highlighted, and the app data it shows (timers, tasks, notes...). A computer opens the same app with ?watch=CODE
+   and replays that state live, so it looks and moves exactly like the lens (clocks and timers tick on their own).
+   Everything is encrypted (AES-GCM) with a key made from the one-time code, before it leaves the glasses, and sent
+   through a free public MQTT relay that only ever sees scrambled bytes. The code never leaves the two devices. */
+const MIRROR_RELAY = 'wss://broker.hivemq.com:8884/mqtt';
+const MIRROR = { client:null, key:null, topic:'', state:'off', seenAt:0, pushT:0, beat:0 };
+
+// a tiny MQTT 3.1.1 client over WebSocket (connect, publish, subscribe, ping), so the lens loads no extra library
+function mqttClient(url, onMsg, onState){
+  let ws = null, buf = new Uint8Array(0), ping = 0, open = false, closed = false, retry = 1000;
+  const subs = [], enc = new TextEncoder();
+  const cat = (...parts) => { let n = 0; for(const p of parts) n += p.length; const o = new Uint8Array(n); let i = 0; for(const p of parts){ o.set(p, i); i += p.length; } return o; };
+  const str = s => { const b = enc.encode(s); return cat(new Uint8Array([b.length >> 8, b.length & 255]), b); };
+  const vlen = n => { const o = []; do { let d = n % 128; n = Math.floor(n / 128); if(n > 0) d |= 128; o.push(d); } while(n > 0); return new Uint8Array(o); };
+  const pkt = (h, body) => cat(new Uint8Array([h]), vlen(body.length), body);
+  const send = p => { try { if(ws && ws.readyState === 1) ws.send(p); } catch(e){} };
+  const sendSub = t => send(pkt(0x82, cat(new Uint8Array([0, 1]), str(t), new Uint8Array([0]))));
+  function connect(){
+    if(closed) return;
+    onState('connecting');
+    try { ws = new WebSocket(url, 'mqtt'); } catch(e){ return later(); }
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => send(pkt(0x10, cat(str('MQTT'), new Uint8Array([4, 2, 0, 60]), str('sv' + Math.random().toString(36).slice(2, 12)))));
+    ws.onmessage = e => { buf = cat(buf, new Uint8Array(e.data)); parse(); };
+    ws.onclose = () => { open = false; clearInterval(ping); onState('offline'); later(); };
+    ws.onerror = () => { try { ws.close(); } catch(e){} };
+  }
+  function later(){ if(!closed){ setTimeout(connect, retry); retry = Math.min(retry * 2, 15000); } }
+  function parse(){
+    for(;;){
+      if(buf.length < 2) return;
+      let mult = 1, len = 0, i = 1, b;
+      do { if(i >= buf.length) return; b = buf[i++]; len += (b & 127) * mult; mult *= 128; } while(b & 128);
+      if(buf.length < i + len) return;
+      const type = buf[0] >> 4, qos = (buf[0] >> 1) & 3, body = buf.subarray(i, i + len);
+      buf = buf.slice(i + len);
+      if(type === 2){ open = true; retry = 1000; subs.forEach(sendSub); clearInterval(ping); ping = setInterval(() => send(new Uint8Array([0xC0, 0])), 30000); onState('on'); }
+      else if(type === 3){ const tl = (body[0] << 8) | body[1], topic = new TextDecoder().decode(body.subarray(2, 2 + tl)); onMsg(topic, body.slice(2 + tl + (qos ? 2 : 0))); }
+    }
+  }
+  connect();
+  return {
+    publish(t, payload, retain){ if(open) send(pkt(0x30 | (retain ? 1 : 0), cat(str(t), payload))); },
+    subscribe(t){ subs.push(t); if(open) sendSub(t); },
+    end(){ closed = true; clearInterval(ping); try { ws && ws.close(); } catch(e){} },
+    get open(){ return open; },
+  };
+}
+
+// the code (8 letters/digits, ~40 bits) makes both the AES key and the relay topic; the relay never sees the code
+const MIRROR_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I
+const mirrorCode = () => { const r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(b => MIRROR_ABC[b % MIRROR_ABC.length]).join(''); };
+const fmtCode = c => c.slice(0, 4) + '-' + c.slice(4);
+async function mirrorKeys(code){
+  const enc = new TextEncoder(), base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:enc.encode('sitevue-ar-mirror-v1'), iterations:60000, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt', 'decrypt']);
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('topic:' + code)));
+  return { key, topic:'sitevue-ar/m/' + [...h.slice(0, 12)].map(b => b.toString(16).padStart(2, '0')).join('') };
+}
+async function seal(obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, MIRROR.key, new TextEncoder().encode(JSON.stringify(obj))));
+  const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return o;
+}
+async function unseal(bytes){
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:bytes.subarray(0, 12) }, MIRROR.key, bytes.subarray(12));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* glasses side: send the screen whenever it changes, plus a heartbeat so the computer knows it's live */
+function mirrorState(){
+  const a = document.activeElement, sv = document.querySelector('.showvid'), { mirror, ...data } = P;
+  return { v:1, t:now(), V, focus:a && a.dataset ? a.dataset.k || null : null, P:data, wallMoving:wallMoves(),
+    SHOW:{ i:SHOW.i, paused:SHOW.paused }, showT:sv ? sv.currentTime : null, K, D, TD,
+    W:{ loading:W.loading, place:W.place, err:W.err, city:W.city }, moving,
+    wx:winEl.style.getPropertyValue('--wx'), wy:winEl.style.getPropertyValue('--wy') };
+}
+function mirrorPush(){
+  if(WATCH !== null || !MIRROR.client) return;
+  clearTimeout(MIRROR.pushT);
+  MIRROR.pushT = setTimeout(async () => { try { MIRROR.client.publish(MIRROR.topic, await seal(mirrorState()), true); } catch(e){} }, 120);
+}
+async function mirrorStart(code){
+  mirrorStopLink();
+  P.mirror = { on:true, code }; save();
+  const k = await mirrorKeys(code); MIRROR.key = k.key; MIRROR.topic = k.topic;
+  MIRROR.client = mqttClient(MIRROR_RELAY, (topic, data) => { if(topic === MIRROR.topic + '/v') MIRROR.seenAt = now(); }, st => {
+    MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic + '/v'); mirrorPush(); }
+    set('mirrorStatus', mirrorStatusText()); });
+  clearInterval(MIRROR.beat); MIRROR.beat = setInterval(mirrorPush, 8000);
+  render();
+}
+function mirrorStopLink(){
+  clearInterval(MIRROR.beat); clearTimeout(MIRROR.pushT);
+  if(MIRROR.client){ MIRROR.client.publish(MIRROR.topic, new Uint8Array(0), true); const c = MIRROR.client; setTimeout(() => c.end(), 300); } // clears the last screen from the relay
+  MIRROR.client = null; MIRROR.state = 'off'; MIRROR.seenAt = 0;
+}
+function mirrorStatusText(){
+  if(MIRROR.state === 'on') return now() - MIRROR.seenAt < 25000 ? '● A computer is watching' : 'Connected · waiting for a computer';
+  return MIRROR.state === 'connecting' ? 'Connecting…' : MIRROR.state === 'offline' ? 'Offline · retrying…' : '';
+}
+document.addEventListener('focusin', () => { if(MIRROR.client) mirrorPush(); });
+
+/* computer side (?watch=CODE): input is switched off, the glasses' screen is replayed as it arrives */
+function mirrorApply(st){
+  if(!st || st.v !== 1) return;
+  MIRROR.seenAt = now();
+  const data = st.P || {};
+  for(const k of Object.keys(P)) if(!(k in data)) delete P[k];
+  Object.assign(P, data); P.wallMove = !!st.wallMoving;
+  if(MODULES.length) SOP = MODULES[P.trainMod] || MODULES[0] || NO_MODULE;
+  Object.assign(SHOW, st.SHOW || {}); Object.assign(K, st.K || {}); if(st.D) D = st.D; TD = st.TD || '';
+  Object.assign(W, st.W || {}); moving = !!st.moving;
+  winEl.style.setProperty('--wx', st.wx || '0px'); winEl.style.setProperty('--wy', st.wy || '0px');
+  apply();
+  if(JSON.stringify(V) !== JSON.stringify(st.V || {})) setView(st.V || {}); else render(true);
+  INPUT_GEN++; // focus repairs must not undo the glasses' highlight
+  const el = st.focus && document.querySelector(`[data-k="${CSS.escape(st.focus)}"]`);
+  if(el) el.focus({ preventScroll:true });
+  const sv = document.querySelector('.showvid');
+  if(sv && st.showT != null && Math.abs(sv.currentTime - st.showT) > .4) try { sv.currentTime = st.showT; } catch(e){}
+  watchBar();
+}
+async function mirrorWatch(code){
+  const k = await mirrorKeys(code); MIRROR.key = k.key; MIRROR.topic = k.topic;
+  MIRROR.client = mqttClient(MIRROR_RELAY, async (topic, data) => {
+    if(topic !== MIRROR.topic) return;
+    if(!data.length){ MIRROR.stopped = true; watchBar(); return; }
+    try { MIRROR.stopped = false; mirrorApply(await unseal(data)); } catch(e){}
+  }, st => { MIRROR.state = st; if(st === 'on') MIRROR.client.subscribe(MIRROR.topic); watchBar(); });
+  // tell the glasses someone is watching (encrypted, every 10 s)
+  setInterval(async () => { try { MIRROR.client.publish(MIRROR.topic + '/v', await seal({ hello:now() }), false); } catch(e){} }, 10000);
+  setInterval(watchBar, 1000);
+}
+function watchBar(){
+  const bar = $('#watchbar'); if(!bar) return;
+  if(!WATCH){ return; }
+  const age = MIRROR.seenAt ? Math.round((now() - MIRROR.seenAt) / 1000) : null;
+  const live = age != null && age < 20 && !MIRROR.stopped;
+  const msg = MIRROR.state !== 'on' ? (MIRROR.state === 'offline' ? 'Relay offline · retrying…' : 'Connecting to the relay…')
+    : MIRROR.stopped ? 'The glasses stopped mirroring' : !MIRROR.seenAt ? 'Waiting for the glasses… (Settings → Mirror to a computer)'
+    : live ? 'Live' : `No update for ${age} s · the glasses may be asleep`;
+  bar.querySelector('.ws').textContent = msg;
+  bar.classList.toggle('live', live);
+  $('#watchwait').style.display = MIRROR.seenAt && !MIRROR.stopped ? 'none' : '';
+}
+function setupWatch(){
+  document.body.classList.add('watching');
+  document.body.insertAdjacentHTML('afterbegin', `<div id="watchbar"><b>SiteVue.AR Home</b><span class="wdot"></span>
+    ${WATCH ? `<span>Watching <b>${fmtCode(WATCH)}</b></span><span class="ws"></span>`
+      : `<span>Enter the code shown on the glasses (Settings → Mirror to a computer)</span>
+         <form id="watchform"><input id="watchcode" maxlength="9" placeholder="ABCD-2345" autocomplete="off" autofocus><button>Watch</button></form>`}</div>`);
+  $('#stage').insertAdjacentHTML('beforeend', `<div id="watchwait">${WATCH ? '<div class="spinner"></div>' : ''}<div>${WATCH ? 'Waiting for the glasses…' : 'Enter the code above'}</div></div>`);
+  const fit = () => document.documentElement.style.setProperty('--vz', Math.max(.5, Math.min(2.2, (innerWidth - 32) / 600, (innerHeight - 90) / 600)));
+  fit(); addEventListener('resize', fit);
+  const form = $('#watchform');
+  if(form) form.addEventListener('submit', e => { e.preventDefault(); const c = $('#watchcode').value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if(c.length === 8) location.search = '?watch=' + c; });
+  if(WATCH) mirrorWatch(WATCH);
+}
+
 /* ---------- boot ---------- */
 const WALL_SPEED = 1; // the file is already slowed to 60% (600x600, 18 fps), so it plays at its native rate - cheaper to decode
 // some browsers reset the rate when the source (re)loads
@@ -1383,6 +1584,8 @@ apply();
 history.replaceState({}, '');
 render(true);
 runIntro();
+if(WATCH !== null) setupWatch();
+else if(P.mirror && P.mirror.on && P.mirror.code) mirrorStart(P.mirror.code); // keep mirroring across restarts until stopped
 </script>
 </body>
 </html>

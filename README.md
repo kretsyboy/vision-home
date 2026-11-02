@@ -68,3 +68,12 @@ The glasses have a small mobile chip and a 30 Hz display, so the app keeps conti
 - **Reduce Motion** pauses the wallpaper and skips the 3D intro, for the lightest possible load.
 
 Click sound: "UI Click" by EminYILDIRIM (freesound.org, sound #536108), played on every pinch; checking off a task plays "Click" by florianreichelt (freesound.org, sound #683098) instead. Turn both off in Settings → Click sounds.
+
+## Mirror to a computer
+
+Watch what the glasses show, live, on any computer (Windows, Mac, Linux) in a web browser.
+
+1. On the glasses: **Settings → Mirror to a computer → Start mirroring**. A code like `K7QM-42XD` appears, and the status bar shows a red **● Mirroring** while it's on.
+2. On the computer: open **kretsyboy.github.io/vision-home/watch** and enter the code.
+
+The viewer replays the glasses' screen (open app, highlight, timers, animations) and can't control the glasses. Everything is encrypted with AES-GCM using a key made from the code, before it leaves the glasses; it travels through HiveMQ's free public MQTT relay, which only sees scrambled data. **Stop mirroring** ends it and clears the last screen from the relay.
