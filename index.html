@@ -326,6 +326,20 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 #watchbar button{background:#4c52f9;color:#fff;border-radius:8px;height:32px;padding:0 14px;font-weight:600}
 #watchwait{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,.72);color:#ccd;font-size:1.05rem}
 
+/* ---------- the glasses: light rendering ----------
+   Moving the highlight must be instant on the lens, so on the glasses (body.lens) nothing animates or blurs when focus
+   moves: no transitions, no blurred glow rings, a simple ring instead, one flat reflection on the glass buttons, and no
+   rounded-corner overlay (black is see-through on the lens anyway). Looks nearly the same; costs far less to draw. */
+.lens *,.lens *::after,.lens *::before{transition:none!important}
+.lens{--halo:0 0 0 3px #fff}
+.lens #stage::after{display:none}
+.lens .icon:focus .disc{box-shadow:0 0 0 3px #fff!important;scale:1.08}
+.lens .icon:focus .fg{scale:1;translate:none}
+.lens #home .icon .disc::after{background:radial-gradient(circle at 32% 22%,rgba(255,255,255,.55),rgba(255,255,255,0) 45%)}
+.lens .tap,.lens .icon.tap .disc,.lens .window.swap>*{animation:none!important}
+.lens .winbar .grab.moving i{box-shadow:none}
+.lens .spin:focus .ar,.lens .slider:focus .track i{transition:none}
+
 /* ---------- toast ---------- */
 #toast{position:absolute;top:14px;left:50%;translate:-50% -80px;padding:12px 22px;border-radius:26px;font-size:1.05rem;
   font-weight:600;white-space:nowrap;z-index:9;transition:translate .35s var(--spring),opacity .25s;opacity:0;pointer-events:none;
@@ -1887,7 +1901,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-04';
+const APP_BUILD = '2026-11-03-05';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -1895,6 +1909,7 @@ async function checkForUpdate(){
     const url = location.pathname + '?build-check=' + now();
     const txt = await (await fetch(url, { cache:'no-store' })).text(), m = txt.match(/const APP_BUILD = '([^']+)'/);
     if(m && m[1] !== APP_BUILD){
+      try { if(sessionStorage.getItem('sv-upd') === m[1]) return; sessionStorage.setItem('sv-upd', m[1]); } catch(e){}
       await fetch(location.pathname, { cache:'reload' }).catch(() => {}); // replace the saved copy with the new one
       UPDATE_READY = true; applyUpdateWhenIdle();
     }
@@ -1959,6 +1974,7 @@ function startVideos(root){
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
 history.replaceState({}, '');
+if(isLens()) document.body.classList.add('lens');
 loadTheme();
 render(true);
 runIntro();
