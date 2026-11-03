@@ -54,6 +54,21 @@ svg{display:block}
 #wallimg{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;pointer-events:none;transition:opacity .4s var(--ease)}
 #wallimg.on{opacity:calc(var(--wall) * (1 - var(--see,0)))}
 #wall.hidden{display:none}
+/* SiteVue purple circuit traces (your reference image, recolored; wallpaper-circuit.jpg) with its lights on a layer of their own (wallpaper-circuit-glow.png)
+   that breathes slowly when Animated Background is on; one opacity animation, cheap to draw */
+#wallglow{position:absolute;inset:0;border-radius:38px;pointer-events:none;opacity:calc(var(--wall) / .7 * (1 - var(--see,0)));transition:opacity .4s var(--ease)}
+#wallglow::before{content:"";position:absolute;inset:0;background:url(wallpaper-circuit-glow.png) center/cover no-repeat}
+#wallglow.pulse::before{animation:glowPulse 3.2s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{opacity:.45}50%{opacity:1}}
+#wall.under~#wallglow{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
+#wall.hidden~#wallglow,#stage.booting #wallglow{opacity:0}
+/* the white SiteVue logo, part of the SiteVue wallpaper, in its top-left corner (clear of the app circle and the bar) */
+#wallbrand{position:absolute;left:36px;top:30px;width:150px;height:auto;fill:#fff;pointer-events:none;
+  opacity:calc(var(--wall) / .7 * (1 - var(--see,0)));transition:opacity .4s var(--ease)}
+#wall.under~#wallbrand{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
+#wall.hidden~#wallbrand,#stage.booting #wallbrand{opacity:0}
+#wall{opacity:calc(var(--wall) / .7 * (1 - var(--see,0)))}
+#wall.under{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
 /* the wallpaper's corners match the pop-up windows (38 px), on every device including the lens */
 #wall,#wallimg{border-radius:38px;overflow:hidden}
 .under~#wallimg.on{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
@@ -124,7 +139,7 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 .icon:focus .fg{scale:1.08;translate:0 -3px}
 /* Home buttons are see-through glass tinted with their color (a thin bright rim keeps the circle crisp); the icon art,
    and Clock In's name, stay solid white on top */
-#home .icon .disc .bg{opacity:.18}
+#home .icon .disc .bg{opacity:0} /* clear glass: no color tint */
 /* light on the glass: a soft glare across the top, a bright spark at the upper left, and a faint rim light at the bottom */
 #home .icon .disc::after{opacity:1;background:
   radial-gradient(circle at 30% 18%,rgba(255,255,255,.75),rgba(255,255,255,0) 22%),
@@ -132,7 +147,9 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
   radial-gradient(ellipse 70% 30% at 50% 100%,rgba(255,255,255,.22),rgba(255,255,255,0) 75%)}
 #home .icon .disc{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.38)}
 #home .icon:focus .disc{box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 14px var(--c1)}
-#home .icon:focus .disc .bg{opacity:.32}
+#home .icon:focus .disc .bg{opacity:0}
+#home .icon .disc{background:rgba(255,255,255,.06)}
+#home .icon:focus .disc{background:rgba(255,255,255,.14)}
 #home .icon .fg{color:#fff}
 .icon:focus .nm{color:#fff}
 .empty{position:absolute;left:110px;right:24px;top:300px;text-align:center}
@@ -363,7 +380,9 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 </head>
 <body>
 <div id="stage" class="booting">
-  <video id="wall" poster="wallpaper.jpg" muted autoplay loop playsinline preload="auto" aria-hidden="true"></video>
+  <video id="wall" poster="wallpaper-circuit.jpg" muted autoplay loop playsinline preload="none" aria-hidden="true"></video>
+  <div id="wallglow" aria-hidden="true"></div>
+  <svg id="wallbrand" viewBox="-4 0 2848 494" aria-label="SiteVue"></svg>
   <div id="wallimg" aria-hidden="true"></div>
   <div id="ui">
     <div id="home"></div>
@@ -896,7 +915,7 @@ Object.assign(VIEWS, {
         <div class="sub">and enter</div><div class="mcode">${fmtCode(PHOTO.code)}</div><div class="sub" data-live="photoStatus">${photoStatusText()}</div></div>
         <button class="btn" data-k="ph-cancel" data-act="photoCancel" data-default style="flex:0 0 auto;margin-top:auto">Cancel</button>`;
       return `<div class="eyebrow">Settings</div><div class="title">Wallpaper photo</div>
-        <div class="lrow" tabindex="0" data-k="ph-now" style="justify-content:flex-start;gap:14px"><span class="phthumb" style="background-image:url('${mine || 'wallpaper.jpg'}')"></span><span><b>${mine ? 'Your photo' : 'SiteVue (default)'}</b><span class="st">Bright parts show on the lens; dark parts stay see-through</span></span></div>
+        <div class="lrow" tabindex="0" data-k="ph-now" style="justify-content:flex-start;gap:14px"><span class="phthumb" style="background-image:url('${mine || 'wallpaper-circuit-lit.jpg'}')"></span><span><b>${mine ? 'Your photo' : 'SiteVue (default)'}</b><span class="st">Bright parts show on the lens; dark parts stay see-through</span></span></div>
         <div class="list" style="flex:0 0 auto">
           <button class="lrow" data-k="ph-iphone" data-act="photoFromPhone" data-default><b>Get a photo from my iPhone</b><span class="r">›</span></button>
           ${here ? `<button class="lrow" data-k="ph-here" data-act="photoHere"><b>Choose a photo on this device</b><span class="r">›</span></button>` : ''}
@@ -1941,7 +1960,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-16';
+const APP_BUILD = '2026-11-03-20';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -1990,6 +2009,10 @@ const isLens = () => innerWidth <= 600 && innerHeight <= 600 && !(window.webkit 
 const wallMoves = () => P.wallMove != null ? P.wallMove : !isLens();
 function wallPlay(){
   const w = $('#wall'); if(!w) return;
+  const gl = $('#wallglow');
+  if(gl) gl.classList.toggle('pulse', wallMoves() && !P.reduce && !P.see && !wallPhoto() && !V.app && !V.cc && !$('#stage').classList.contains('booting'));
+  if(w.getAttribute('src')){ w.pause(); w.removeAttribute('src'); w.load(); }
+  return;
   const freeDecoder = $('#stage').classList.contains('booting') || !!wallPhoto() || !wallMoves() || P.see || V.app === 'training' && (V.arg === 'step' || V.arg === 'show') && typeof hasVideo === 'function' && hasVideo();
   if(freeDecoder){
     if(w.getAttribute('src')){ WALL_T = w.currentTime || 0; w.pause(); w.removeAttribute('src'); w.load(); }
@@ -2014,6 +2037,7 @@ function startVideos(root){
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
 history.replaceState({}, '');
+$('#wallbrand').innerHTML = `<path fill-rule="evenodd" d="${LOGO.slice(0, 11).map(p => p[4]).join('')}"/>`;
 if(isLens()) document.body.classList.add('lens');
 loadTheme();
 render(true);
