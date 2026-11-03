@@ -288,11 +288,11 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 .ccclose:focus{color:#fff}
 
 /* ---------- boot intro ---------- */
-/* the intro plays on SiteVue brand plum (#1E1028, design.sitevue.ai), with a plum glow behind the logo */
-#boot{position:absolute;inset:0;z-index:8;background:#1e1028;border-radius:38px;perspective:700px;overflow:hidden;transition:opacity .5s var(--ease),scale .6s var(--ease)}
+/* the intro is see-through (black is clear on the lens) except a brand-plum glow right behind the letters */
+#boot{position:absolute;inset:0;z-index:8;perspective:700px;overflow:hidden;transition:opacity .5s var(--ease),scale .6s var(--ease)}
 #boot.out{opacity:0;scale:1.06;pointer-events:none}
-#boot .glow{position:absolute;left:50%;top:50%;width:540px;height:230px;translate:-50% -50%;border-radius:50%;opacity:0;transition:opacity .6s;
-  background:radial-gradient(closest-side,rgba(140,72,190,.55),rgba(74,30,104,.25) 60%,transparent)}
+#boot .glow{position:absolute;left:50%;top:50%;width:560px;height:200px;translate:-50% -50%;border-radius:50%;opacity:.55;transition:opacity .6s;
+  background:radial-gradient(closest-side,rgba(150,80,200,.6),rgba(90,40,125,.32) 55%,rgba(30,16,40,0))}
 @property --dz{syntax:'<length>';inherits:true;initial-value:0px}
 #boot .logo,#boot .pcs{position:absolute;left:60px;top:266px;width:480px;height:68px;transform-style:preserve-3d}
 /* each piece keeps its own 3D extrusion, but pieces never intersect: .pcs flattens them and paints back-to-front (see runIntro),
@@ -1941,7 +1941,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-15';
+const APP_BUILD = '2026-11-03-16';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
