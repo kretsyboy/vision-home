@@ -46,7 +46,7 @@ svg{display:block}
 #stage{position:relative;width:600px;height:600px;overflow:hidden;background:#000;isolation:isolate}
 /* rounded lens corners: a static black frame drawn on top (black is see-through on the lens). Cheaper than a rounded clip,
    which makes the GPU mask the video and every layer on each frame */
-#stage::after{content:"";position:absolute;inset:0;border-radius:48px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
+#stage::after{content:"";position:absolute;inset:0;border-radius:38px;box-shadow:0 0 0 60px #000;pointer-events:none;z-index:20}
 #wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:calc(var(--wall) * (1 - var(--see,0)));transition:opacity .4s var(--ease);pointer-events:none}
 /* no wallpaper behind the SiteVue AI intro: it fades in once the intro hands over to Home */
 #stage.booting #wall,#stage.booting #wallimg{opacity:0}
@@ -54,6 +54,8 @@ svg{display:block}
 #wallimg{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;pointer-events:none;transition:opacity .4s var(--ease)}
 #wallimg.on{opacity:calc(var(--wall) * (1 - var(--see,0)))}
 #wall.hidden{display:none}
+/* the wallpaper's corners match the pop-up windows (38 px), on every device including the lens */
+#wall,#wallimg{border-radius:38px;overflow:hidden}
 .under~#wallimg.on{opacity:calc(var(--wall) * .45 * (1 - var(--see,0)))}
 /* the iPhone send page */
 .photosend #stage,.photosend #help{display:none!important}
@@ -1910,7 +1912,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-07';
+const APP_BUILD = '2026-11-03-08';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
