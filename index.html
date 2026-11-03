@@ -288,10 +288,11 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 .ccclose:focus{color:#fff}
 
 /* ---------- boot intro ---------- */
-#boot{position:absolute;inset:0;z-index:8;perspective:700px;overflow:hidden;transition:opacity .5s var(--ease),scale .6s var(--ease)}
+/* the intro plays on SiteVue brand plum (#1E1028, design.sitevue.ai), with a plum glow behind the logo */
+#boot{position:absolute;inset:0;z-index:8;background:#1e1028;border-radius:38px;perspective:700px;overflow:hidden;transition:opacity .5s var(--ease),scale .6s var(--ease)}
 #boot.out{opacity:0;scale:1.06;pointer-events:none}
 #boot .glow{position:absolute;left:50%;top:50%;width:540px;height:230px;translate:-50% -50%;border-radius:50%;opacity:0;transition:opacity .6s;
-  background:radial-gradient(closest-side,rgba(76,82,249,.55),rgba(42,7,246,.18) 60%,transparent)}
+  background:radial-gradient(closest-side,rgba(140,72,190,.55),rgba(74,30,104,.25) 60%,transparent)}
 @property --dz{syntax:'<length>';inherits:true;initial-value:0px}
 #boot .logo,#boot .pcs{position:absolute;left:60px;top:266px;width:480px;height:68px;transform-style:preserve-3d}
 /* each piece keeps its own 3D extrusion, but pieces never intersect: .pcs flattens them and paints back-to-front (see runIntro),
@@ -370,7 +371,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
   </div>
   <div id="boot" aria-label="SiteVue AI">
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-      <linearGradient id="bootFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9f9fc"/><stop offset=".45" stop-color="#8fa4ff"/><stop offset="1" stop-color="#4c52f9"/></linearGradient>
+      <linearGradient id="bootFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7fd"/><stop offset=".45" stop-color="#c79be6"/><stop offset="1" stop-color="#7b3fb3"/></linearGradient>
       <linearGradient id="bootShine" gradientUnits="userSpaceOnUse" x1="-900" y1="0" x2="0" y2="0">
         <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
         <animateTransform id="bootSweep" attributeName="gradientTransform" type="translate" from="0 0" to="4500 0" dur="1.5s" begin="indefinite" fill="freeze"/>
@@ -1503,7 +1504,7 @@ function runIntro(){
   // while flying, each piece is extruded: a bright face plus DEPTH darker layers stepping back along z
   // 18 thin slices 1.2 px apart (same 21.6 px depth as before) with a smooth color ramp, so the sides read as one solid
   // object instead of visible steps
-  const DEPTH = 12, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
+  const DEPTH = 12, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(84, 30)},${m(42, 16)},${m(122, 40)})`; }; // shadowed violet to brand plum: sides (and the inside of holes) read darker than the face
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
   // every layer is drawn once into a bitmap (sharp at the 2x size the pieces fly in at), so while they move the device
   // only slides finished pictures around instead of redrawing ~170 vector shapes each frame
@@ -1522,7 +1523,7 @@ function runIntro(){
     if(j){ g.fillStyle = side(j); g.fill(path, 'evenodd'); }
     else {
       const gr = g.createLinearGradient(0, y, 0, y + hh);
-      gr.addColorStop(0, '#f9f9fc'); gr.addColorStop(.45, '#8fa4ff'); gr.addColorStop(1, '#4c52f9');
+      gr.addColorStop(0, '#fbf7fd'); gr.addColorStop(.45, '#c79be6'); gr.addColorStop(1, '#7b3fb3'); // brand plum family
       g.fillStyle = gr; g.fill(path, 'evenodd');
       g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; g.stroke(path);
     }
@@ -1940,7 +1941,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-10';
+const APP_BUILD = '2026-11-03-13';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
