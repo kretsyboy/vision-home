@@ -62,8 +62,8 @@ svg{display:block}
 @keyframes glowPulse{0%,100%{opacity:.45}50%{opacity:1}}
 #wall.under~#wallglow{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
 #wall.hidden~#wallglow,#stage.booting #wallglow{opacity:0}
-/* the white SiteVue logo, part of the SiteVue wallpaper, in its top-left corner (clear of the app circle and the bar) */
-#wallbrand{position:absolute;left:36px;top:30px;width:150px;height:auto;fill:#fff;pointer-events:none;
+/* the white SiteVue AI logo, part of the SiteVue wallpaper, in its top-left corner (clear of the app circle and the bar) */
+#wallbrand{position:absolute;left:36px;top:30px;width:186px;height:auto;fill:#fff;pointer-events:none;
   opacity:calc(var(--wall) / .7 * (1 - var(--see,0)));transition:opacity .4s var(--ease)}
 #wall.under~#wallbrand{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
 #wall.hidden~#wallbrand,#stage.booting #wallbrand{opacity:0}
@@ -382,7 +382,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 <div id="stage" class="booting">
   <video id="wall" poster="wallpaper-circuit.jpg" muted autoplay loop playsinline preload="none" aria-hidden="true"></video>
   <div id="wallglow" aria-hidden="true"></div>
-  <svg id="wallbrand" viewBox="-4 0 2848 494" aria-label="SiteVue"></svg>
+  <svg id="wallbrand" viewBox="-4 0 3534 494" aria-label="SiteVue AI"></svg>
   <div id="wallimg" aria-hidden="true"></div>
   <div id="ui">
     <div id="home"></div>
@@ -1960,7 +1960,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-21';
+const APP_BUILD = '2026-11-03-22';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -2037,7 +2037,7 @@ function startVideos(root){
 if(navigator.getBattery) navigator.getBattery().then(b => { BAT = b; b.addEventListener('levelchange', () => tick()); }).catch(() => {});
 apply();
 history.replaceState({}, '');
-$('#wallbrand').innerHTML = `<path fill-rule="evenodd" d="${LOGO.slice(0, 11).map(p => p[4]).join('')}"/>`;
+$('#wallbrand').innerHTML = `<path fill-rule="evenodd" d="${LOGO.map(p => p[4]).join('')}"/>`; // the mark and "SiteVue AI"
 if(isLens()) document.body.classList.add('lens');
 loadTheme();
 render(true);
