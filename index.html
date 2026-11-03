@@ -524,7 +524,7 @@ function setView(st){
   if(V.app && !VIEWS[V.app]) V = {}; // e.g. a history entry for a removed app
   if(V.app && !prev.app) winAnim = true;
   if(V.cc && !prev.cc) ccAnim = true;
-  if(!V.app) moving = false;
+  if(!V.app || prev.app !== V.app || prev.arg !== V.arg) moving = false; // Move mode ends when the screen changes, so swipes never get stuck moving the window
   confirmKey = null;
   render(true);
 }
@@ -1941,7 +1941,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-14';
+const APP_BUILD = '2026-11-03-15';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
