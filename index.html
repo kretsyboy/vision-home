@@ -1226,7 +1226,7 @@ function moveFocus([dx, dy]){
   if(dx && V.app === 'training' && V.arg === 'show' && !(document.activeElement && document.activeElement.closest('.winbar'))){ ACT.showStep(dx); playSound('click'); render(); return; }
   const scope = V.cc ? ccEl : V.app ? winEl : homeEl, items = focusables(scope);
   const cur = items.includes(document.activeElement) ? document.activeElement : null;
-  if(!cur){ const d = scope.querySelector('[data-default]') || items[0]; d && d.focus({ preventScroll:true }); return; }
+  if(!cur){ const d = scope.querySelector('[data-default]') || items[0]; if(!d) return; d.focus({ preventScroll:true }); if(document.activeElement === d && items.length > 1) moveFocus([dx, dy]); return; }
   const c = center(cur); let best = null, bs = Infinity;
   for(const el of items){
     if(el === cur) continue;
@@ -1683,6 +1683,20 @@ function mirrorStatusText(){
   return MIRROR.state === 'connecting' ? 'Connecting…' : MIRROR.state === 'offline' ? 'Offline · retrying…' : '';
 }
 document.addEventListener('focusin', () => { if(MIRROR.client) mirrorPush(); });
+/* keep a highlight at all times: on the glasses the pinch that opens a screen also sends a press that can knock focus
+   off the page; then the first swipe was spent just bringing the highlight back. If focus drops to nothing (or onto a
+   hidden layer), put it straight back on the visible screen: the last control you were on, else the screen's default. */
+let LASTF = null;
+document.addEventListener('focusin', e => { const l = V.cc ? ccEl : V.app ? winEl : homeEl; if(l.contains(e.target)) LASTF = e.target; });
+document.addEventListener('focusout', () => {
+  if(WATCH !== null || PHOTOSEND !== null) return;
+  setTimeout(() => {
+    const l = V.cc ? ccEl : V.app ? winEl : homeEl, a = document.activeElement;
+    if(a && a !== document.body && l.contains(a)) return;
+    const t = (LASTF && LASTF.isConnected && l.contains(LASTF) && LASTF) || l.querySelector('[data-default]') || focusables(l)[0];
+    if(t) t.focus({ preventScroll:true });
+  }, 0);
+});
 
 /* computer side (?watch=CODE): input is switched off, the glasses' screen is replayed as it arrives */
 function mirrorApply(st){
@@ -1912,7 +1926,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-08';
+const APP_BUILD = '2026-11-03-09';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
