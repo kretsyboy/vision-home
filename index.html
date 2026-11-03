@@ -1667,14 +1667,14 @@ async function mirrorStart(code){
   let k; try { k = await mirrorKeys(code); } catch(e){ MIRROR.err = 'Couldn’t start mirroring: ' + e.message; MIRROR.state = 'off'; P.mirror = { on:false }; return render(); }
   MIRROR.key = k.key; MIRROR.topic = k.topic;
   MIRROR.client = mqttClient(MIRROR_RELAY, (topic, data) => { if(topic === MIRROR.topic + '/v') MIRROR.seenAt = now(); }, st => {
-    MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic + '/v'); mirrorPush(); }
+    MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic + '/v'); mirrorPush(); MIRROR.sentPhoto = null; mirrorPhoto(); }
     set('mirrorStatus', mirrorStatusText()); });
   clearInterval(MIRROR.beat); MIRROR.beat = setInterval(mirrorPush, 8000);
   render();
 }
 function mirrorStopLink(){
   clearInterval(MIRROR.beat); clearTimeout(MIRROR.pushT);
-  if(MIRROR.client){ MIRROR.client.publish(MIRROR.topic, new Uint8Array(0), true); const c = MIRROR.client; setTimeout(() => c.end(), 300); } // clears the last screen from the relay
+  if(MIRROR.client){ MIRROR.client.publish(MIRROR.topic, new Uint8Array(0), true); MIRROR.client.publish(MIRROR.topic + '/w', new Uint8Array(0), true); const c = MIRROR.client; setTimeout(() => c.end(), 300); } // clears the last screen from the relay
   MIRROR.client = null; MIRROR.state = 'off'; MIRROR.seenAt = 0;
 }
 function mirrorStatusText(){
@@ -1718,13 +1718,27 @@ function mirrorApply(st){
   if(sv && st.showT != null && Math.abs(sv.currentTime - st.showT) > .4) try { sv.currentTime = st.showT; } catch(e){}
   watchBar();
 }
+// the wallpaper photo travels separately from the screen updates (it's big and rarely changes)
+async function mirrorPhoto(){
+  if(WATCH !== null || !MIRROR.client || !MIRROR.client.open) return;
+  const u = wallPhoto(), id = u ? u.length + ':' + u.slice(-48) : '';
+  if(id === MIRROR.sentPhoto) return; MIRROR.sentPhoto = id;
+  let img = '';
+  if(u){ try { const im = new Image(); im.src = u; await im.decode(); const c = document.createElement('canvas'); c.width = c.height = 400;
+    c.getContext('2d').drawImage(im, 0, 0, 400, 400); img = c.toDataURL('image/jpeg', .72); } catch(e){ img = u; } }
+  try { MIRROR.client.publish(MIRROR.topic + '/w', await seal({ img }), true); } catch(e){}
+}
 async function mirrorWatch(code){
   const k = await mirrorKeys(code); MIRROR.key = k.key; MIRROR.topic = k.topic;
   MIRROR.client = mqttClient(MIRROR_RELAY, async (topic, data) => {
+    if(topic === MIRROR.topic + '/w'){ // the glasses' wallpaper photo (or none): show it, with the colors it gives the apps
+      try { const m = await unseal(data); MIRROR.photo = m.img || ''; showWallPhoto(); wallPlay(); THEME = MIRROR.photo ? await photoTheme(MIRROR.photo) : null; render(true); } catch(e){}
+      return;
+    }
     if(topic !== MIRROR.topic) return;
     if(!data.length){ MIRROR.stopped = true; watchBar(); return; }
     try { MIRROR.stopped = false; mirrorApply(await unseal(data)); } catch(e){}
-  }, st => { MIRROR.state = st; if(st === 'on') MIRROR.client.subscribe(MIRROR.topic); watchBar(); });
+  }, st => { MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic); MIRROR.client.subscribe(MIRROR.topic + '/w'); } watchBar(); });
   // tell the glasses someone is watching (encrypted, every 10 s)
   setInterval(async () => { try { MIRROR.client.publish(MIRROR.topic + '/v', await seal({ hello:now() }), false); } catch(e){} }, 10000);
   setInterval(watchBar, 1000);
@@ -1762,10 +1776,10 @@ function setupWatch(){
    photo directly. The photo is kept on the device in its own storage slot (not in P, so mirroring stays light). */
 const PHOTO_KEY = 'sitevue-ar-wallphoto';
 const PHOTO = { client:null, code:'', state:'off' };
-const wallPhoto = () => { try { return localStorage.getItem(PHOTO_KEY) || ''; } catch(e){ return ''; } };
+const wallPhoto = () => { if(WATCH !== null) return MIRROR.photo || ''; try { return localStorage.getItem(PHOTO_KEY) || ''; } catch(e){ return ''; } };
 function setWallPhoto(dataURL){
   try { if(dataURL) localStorage.setItem(PHOTO_KEY, dataURL); else localStorage.removeItem(PHOTO_KEY); } catch(e){ toast('Not enough space for that photo'); return; }
-  showWallPhoto(); wallPlay(); refreshTheme();
+  showWallPhoto(); wallPlay(); refreshTheme(); mirrorPhoto();
 }
 function showWallPhoto(){
   const u = wallPhoto(), el = $('#wallimg');
@@ -1917,7 +1931,7 @@ function loadTheme(){
 async function refreshTheme(){
   const u = wallPhoto();
   THEME = u ? await photoTheme(u) : null;
-  try { if(THEME) localStorage.setItem(THEME_KEY, JSON.stringify(THEME)); else localStorage.removeItem(THEME_KEY); } catch(e){}
+  if(WATCH === null) try { if(THEME) localStorage.setItem(THEME_KEY, JSON.stringify(THEME)); else localStorage.removeItem(THEME_KEY); } catch(e){}
   render();
 }
 
@@ -1926,7 +1940,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-09';
+const APP_BUILD = '2026-11-03-10';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
