@@ -1047,7 +1047,7 @@ const ACT = {
   photoCancel(){ photoStop(); },
   photoHere(){ pickHere(); },
   photoReset(){ setWallPhoto(''); toast('SiteVue wallpaper restored'); },
-  mirrorOn(){ mirrorStart(mirrorCode()); },
+  mirrorOn(){ toast('Starting mirroring…'); mirrorStart(mirrorCode()).catch(e => { MIRROR.err = 'Couldn’t start mirroring (' + e.message + ').'; render(); }); },
   mirrorOff(){ mirrorStopLink(); P.mirror = { on:false }; save(); toast('Mirroring stopped'); },
   trRetry(){ TRLOAD.failed = false; loadTraining(); },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; hPush(st); setView(st); },
@@ -1625,7 +1625,7 @@ const mirrorCode = () => { const r = crypto.getRandomValues(new Uint8Array(8)); 
 const fmtCode = c => c.slice(0, 4) + '-' + c.slice(4);
 async function mirrorKeys(code){
   const enc = new TextEncoder(), base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
-  const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:enc.encode('sitevue-ar-mirror-v1'), iterations:60000, hash:'SHA-256' },
+  const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:enc.encode('sitevue-ar-mirror-v1'), iterations:12000, hash:'SHA-256' },
     base, { name:'AES-GCM', length:256 }, false, ['encrypt', 'decrypt']);
   const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode('topic:' + code)));
   return { key, topic:'sitevue-ar/m/' + [...h.slice(0, 12)].map(b => b.toString(16).padStart(2, '0')).join('') };
@@ -1655,7 +1655,10 @@ function mirrorPush(){
 async function mirrorStart(code){
   mirrorStopLink();
   P.mirror = { on:true, code }; save();
-  const k = await mirrorKeys(code); MIRROR.key = k.key; MIRROR.topic = k.topic;
+  MIRROR.state = 'connecting'; MIRROR.err = ''; render(); // the code shows the moment you pinch
+  if(!(window.crypto && crypto.subtle)){ MIRROR.err = 'This browser can’t encrypt, so mirroring isn’t available here.'; MIRROR.state = 'off'; return render(); }
+  let k; try { k = await mirrorKeys(code); } catch(e){ MIRROR.err = 'Couldn’t start mirroring (' + e.message + ').'; MIRROR.state = 'off'; return render(); }
+  MIRROR.key = k.key; MIRROR.topic = k.topic;
   MIRROR.client = mqttClient(MIRROR_RELAY, (topic, data) => { if(topic === MIRROR.topic + '/v') MIRROR.seenAt = now(); }, st => {
     MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic + '/v'); mirrorPush(); }
     set('mirrorStatus', mirrorStatusText()); });
@@ -1668,6 +1671,7 @@ function mirrorStopLink(){
   MIRROR.client = null; MIRROR.state = 'off'; MIRROR.seenAt = 0;
 }
 function mirrorStatusText(){
+  if(MIRROR.err) return MIRROR.err;
   if(MIRROR.state === 'on') return now() - MIRROR.seenAt < 25000 ? '● A computer is watching' : 'Connected · waiting for a computer';
   return MIRROR.state === 'connecting' ? 'Connecting…' : MIRROR.state === 'offline' ? 'Offline · retrying…' : '';
 }
@@ -1901,7 +1905,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-05';
+const APP_BUILD = '2026-11-03-06';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
