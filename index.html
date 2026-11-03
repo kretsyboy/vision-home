@@ -903,6 +903,8 @@ Object.assign(VIEWS, {
       const on = P.mirror && P.mirror.on;
       if(!on) return `<div class="eyebrow">Settings</div><div class="title">Mirror to a computer</div>
         <div class="sub" style="font-size:1rem">Show what you see in these glasses, live, on any computer: Windows, Mac or Linux, in a web browser. Everything is encrypted with a one-time code before it leaves the glasses.</div>
+        ${MIRROR.err ? `<div class="sub" style="color:#ff8a84;font-size:.95rem">${h(MIRROR.err)}</div>` : ''}
+        <div class="sub dim" style="font-size:.8rem">Version ${APP_BUILD} · encryption ${window.crypto && crypto.subtle ? 'ready' : 'unavailable'}</div>
         <button class="btn primary" data-k="mi-start" data-act="mirrorOn" data-default style="flex:0 0 auto;margin-top:auto">Start mirroring</button>`;
       return `<div class="eyebrow">Mirroring · <span class="mirr">on</span></div>
         <div class="center" style="gap:6px;flex:0 0 auto"><div class="sub">On the computer, open</div><div class="title" style="font-size:1.25rem">kretsyboy.github.io/vision-home/watch</div>
@@ -928,6 +930,7 @@ Object.assign(VIEWS, {
         <button class="lrow" data-k="s-reduce" data-act="tile" data-v="reduce"><b>Reduce Motion</b><span class="tog ${P.reduce ? 'on' : ''}"></span></button>
         <button class="lrow" data-k="s-dnd" data-act="tile" data-v="dnd"><b>Do Not Disturb</b><span class="r" style="display:flex;gap:12px;align-items:center"><span class="dim" style="font-size:.9rem">mutes spoken alerts</span><span class="tog ${P.dnd ? 'on' : ''}"></span></span></button>
         <button class="lrow" data-k="s-reset" data-act="resetAll"><b style="color:#ff8a84">${confirmKey === 'reset' ? 'Pinch again to erase everything' : 'Reset all data'}</b></button>
+        <div class="sub dim" style="font-size:.8rem;text-align:center;padding:4px 0">Version ${APP_BUILD}</div>
       </div>`;
   },
   person(i){
@@ -1047,7 +1050,9 @@ const ACT = {
   photoCancel(){ photoStop(); },
   photoHere(){ pickHere(); },
   photoReset(){ setWallPhoto(''); toast('SiteVue wallpaper restored'); },
-  mirrorOn(){ toast('Starting mirroring…'); mirrorStart(mirrorCode()).catch(e => { MIRROR.err = 'Couldn’t start mirroring (' + e.message + ').'; render(); }); },
+  mirrorOn(){ toast('Starting mirroring…');
+    try { mirrorStart(mirrorCode()).catch(e => { MIRROR.err = 'Couldn’t start mirroring: ' + e.message; P.mirror = { on:false }; render(); }); }
+    catch(e){ MIRROR.err = 'Couldn’t start mirroring: ' + e.message; P.mirror = { on:false }; } },
   mirrorOff(){ mirrorStopLink(); P.mirror = { on:false }; save(); toast('Mirroring stopped'); },
   trRetry(){ TRLOAD.failed = false; loadTraining(); },
   trainPick(v){ useModule(+v); const st = { app:'training', arg:'mod' }; hPush(st); setView(st); },
@@ -1621,7 +1626,7 @@ function mqttClient(url, onMsg, onState){
 
 // the code (8 letters/digits, ~40 bits) makes both the AES key and the relay topic; the relay never sees the code
 const MIRROR_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I
-const mirrorCode = () => { const r = crypto.getRandomValues(new Uint8Array(8)); return [...r].map(b => MIRROR_ABC[b % MIRROR_ABC.length]).join(''); };
+const mirrorCode = () => { let r; try { r = crypto.getRandomValues(new Uint8Array(8)); } catch(e){ r = Array.from({ length:8 }, () => Math.floor(Math.random() * 256)); } return [...r].map(b => MIRROR_ABC[b % MIRROR_ABC.length]).join(''); };
 const fmtCode = c => c.slice(0, 4) + '-' + c.slice(4);
 async function mirrorKeys(code){
   const enc = new TextEncoder(), base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveKey']);
@@ -1656,8 +1661,8 @@ async function mirrorStart(code){
   mirrorStopLink();
   P.mirror = { on:true, code }; save();
   MIRROR.state = 'connecting'; MIRROR.err = ''; render(); // the code shows the moment you pinch
-  if(!(window.crypto && crypto.subtle)){ MIRROR.err = 'This browser can’t encrypt, so mirroring isn’t available here.'; MIRROR.state = 'off'; return render(); }
-  let k; try { k = await mirrorKeys(code); } catch(e){ MIRROR.err = 'Couldn’t start mirroring (' + e.message + ').'; MIRROR.state = 'off'; return render(); }
+  if(!(window.crypto && crypto.subtle)){ MIRROR.err = 'These glasses’ browser has no encryption support, so mirroring can’t start.'; MIRROR.state = 'off'; P.mirror = { on:false }; return render(); }
+  let k; try { k = await mirrorKeys(code); } catch(e){ MIRROR.err = 'Couldn’t start mirroring: ' + e.message; MIRROR.state = 'off'; P.mirror = { on:false }; return render(); }
   MIRROR.key = k.key; MIRROR.topic = k.topic;
   MIRROR.client = mqttClient(MIRROR_RELAY, (topic, data) => { if(topic === MIRROR.topic + '/v') MIRROR.seenAt = now(); }, st => {
     MIRROR.state = st; if(st === 'on'){ MIRROR.client.subscribe(MIRROR.topic + '/v'); mirrorPush(); }
@@ -1905,7 +1910,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-06';
+const APP_BUILD = '2026-11-03-07';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
