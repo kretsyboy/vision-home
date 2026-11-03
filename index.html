@@ -1960,7 +1960,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-20';
+const APP_BUILD = '2026-11-03-21';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -2042,6 +2042,13 @@ if(isLens()) document.body.classList.add('lens');
 loadTheme();
 render(true);
 runIntro();
+// once, when the purple circuit wallpaper arrives: switch back from any saved wallpaper photo so it shows
+// (you can still pick a photo again in Settings → Wallpaper photo)
+if(WATCH === null && PHOTOSEND === null && P.wallV3 !== 1){
+  P.wallV3 = 1; save();
+  try { localStorage.removeItem(PHOTO_KEY); localStorage.removeItem(THEME_KEY); } catch(e){}
+  THEME = null;
+}
 showWallPhoto();
 if(PHOTOSEND !== null) setupPhotoSend();
 else if(WATCH !== null) setupWatch();
