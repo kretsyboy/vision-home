@@ -123,7 +123,11 @@ button:focus,[tabindex="0"]:focus,textarea:focus,input:focus{box-shadow:var(--ha
 /* Home buttons are see-through glass tinted with their color (a thin bright rim keeps the circle crisp); the icon art,
    and Clock In's name, stay solid white on top */
 #home .icon .disc .bg{opacity:.18}
-#home .icon .disc::after{opacity:.25}
+/* light on the glass: a soft glare across the top, a bright spark at the upper left, and a faint rim light at the bottom */
+#home .icon .disc::after{opacity:1;background:
+  radial-gradient(circle at 30% 18%,rgba(255,255,255,.75),rgba(255,255,255,0) 22%),
+  radial-gradient(ellipse 85% 55% at 50% 0%,rgba(255,255,255,.42),rgba(255,255,255,0) 70%),
+  radial-gradient(ellipse 70% 30% at 50% 100%,rgba(255,255,255,.22),rgba(255,255,255,0) 75%)}
 #home .icon .disc{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.38)}
 #home .icon:focus .disc{box-shadow:0 0 0 3px rgba(255,255,255,.92),0 0 14px var(--c1)}
 #home .icon:focus .disc .bg{opacity:.32}
@@ -293,6 +297,7 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 #boot .pcs{left:0;top:0;transform-style:flat;perspective:700px}
 #boot .pc{position:absolute;transform-style:preserve-3d;will-change:transform;--dz:1.8px} /* fixed thickness: only transform animates, so it stays on the GPU */
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#boot canvas.ly{inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);backface-visibility:hidden}
 #boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .45s var(--ease)}
 #boot .pcs{transition:opacity .45s var(--ease),visibility 0s .45s} /* crossfades into the flat logo, then stops drawing */
 #boot.lit .glow,#boot.lit .whole{opacity:1}
@@ -1132,14 +1137,14 @@ const curClip = () => $('.showvid') || $('video.stimg');
 document.addEventListener('ended', e => {
   const sv = e.target;
   if(sv.classList && sv.classList.contains('stimg')){ // a step's clip: hold the assembled result, then blend back to the start
-    setTimeout(() => { if(!sv.isConnected) return; freezeFrame(sv); sv.currentTime = 0; sv.play().catch(() => {}); }, 1200);
+    if(sv.isConnected){ freezeFrame(sv); sv.currentTime = 0; sv.play().catch(() => {}); } // straight back to the start, blended, no hold
     return;
   }
 }, true);
 document.addEventListener('ended', e => {
   const vd = e.target; if(!vd.dataset || vd.dataset.show == null) return;
   clearTimeout(SHOW.t);
-  SHOW.t = setTimeout(() => { if(V.app === 'training' && V.arg === 'show' && !SHOW.paused && SHOW.i === +vd.dataset.show){ ACT.showStep(1); render(); } }, 1500);
+  SHOW.t = setTimeout(() => { if(V.app === 'training' && V.arg === 'show' && !SHOW.paused && SHOW.i === +vd.dataset.show){ ACT.showStep(1); render(); } }, 0); // next step right away, crossfaded
 }, true);
 document.addEventListener('input', e => {
   const t = e.target;
@@ -1479,13 +1484,28 @@ function runIntro(){
   // object instead of visible steps
   const DEPTH = 12, side = j => { const t = (j - 1) / (DEPTH - 1), m = (a, b) => Math.round(a + (b - a) * t); return `rgb(${m(92, 23)},${m(99, 18)},${m(255, 122)})`; };
   boot.querySelector('defs').insertAdjacentHTML('beforeend', LOGO.map((p, i) => `<path id="lp${i}" d="${p[4]}" fill-rule="evenodd"/>`).join(''));
+  // every layer is drawn once into a bitmap (sharp at the 2x size the pieces fly in at), so while they move the device
+  // only slides finished pictures around instead of redrawing ~170 vector shapes each frame
+  const RES = 2 * Math.max(1, Math.min(2, devicePixelRatio || 1));
   pcs.innerHTML = LOGO.map(([x, y, w, hh], i) => {
-    const vb = `viewBox="${x} ${y} ${w} ${hh}" aria-hidden="true"`;
     let ly = '';
-    for(let j = DEPTH; j >= 1; j--) ly += `<svg class="ly dp" ${vb} style="transform:translateZ(calc(var(--dz) * -${j}))"><use href="#lp${i}" fill="${side(j)}"/></svg>`;
-    ly += `<svg class="ly" ${vb}><use href="#lp${i}" fill="url(#bootFill)" stroke="rgba(255,255,255,.55)" stroke-width="5"/></svg>`;
+    for(let j = DEPTH; j >= 1; j--) ly += `<canvas class="ly dp" data-p="${i}" data-j="${j}" style="transform:translateZ(calc(var(--dz) * -${j}))"></canvas>`;
+    ly += `<canvas class="ly" data-p="${i}" data-j="0"></canvas>`;
     return `<div class="pc" style="left:${x * K}px;top:${y * K}px;width:${w * K}px;height:${hh * K}px">${ly}</div>`;
   }).join('');
+  pcs.querySelectorAll('canvas').forEach(cv => {
+    const i = +cv.dataset.p, j = +cv.dataset.j, [x, y, w, hh, d] = LOGO[i], f = K * RES;
+    cv.width = Math.ceil(w * f) + 4; cv.height = Math.ceil(hh * f) + 4;
+    const g = cv.getContext('2d'), path = new Path2D(d);
+    g.translate(2, 2); g.scale(f, f); g.translate(-x, -y);
+    if(j){ g.fillStyle = side(j); g.fill(path, 'evenodd'); }
+    else {
+      const gr = g.createLinearGradient(0, y, 0, y + hh);
+      gr.addColorStop(0, '#f9f9fc'); gr.addColorStop(.45, '#8fa4ff'); gr.addColorStop(1, '#4c52f9');
+      g.fillStyle = gr; g.fill(path, 'evenodd');
+      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; g.stroke(path);
+    }
+  });
   // finished logo: gradient letters, a white copy of each piece (lit as the light passes it), then the moving light on top
   boot.querySelector('.whole').innerHTML = `<path d="${all}" fill="url(#bootFill)" fill-rule="evenodd"/>`
     + LOGO.map((p, i) => `<use class="wh" href="#lp${i}" fill="#fff"/>`).join('')
@@ -1867,7 +1887,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-01';
+const APP_BUILD = '2026-11-03-04';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -1886,7 +1906,7 @@ function applyUpdateWhenIdle(){
   toast('Updating to the latest version…', 3000);
   setTimeout(() => location.reload(), 900);
 }
-setTimeout(checkForUpdate, 4000);
+setTimeout(checkForUpdate, 12000); // after the intro, so it never competes with it
 setInterval(checkForUpdate, 5 * 60000);
 document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') checkForUpdate(); });
 addEventListener('popstate', () => setTimeout(applyUpdateWhenIdle, 600)); // returning to Home is the moment to update
