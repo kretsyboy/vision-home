@@ -302,12 +302,13 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 #boot .ly{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 #boot canvas.ly{inset:-2px;width:calc(100% + 4px);height:calc(100% + 4px);backface-visibility:hidden}
 #boot .whole{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .45s var(--ease)}
-#boot .pcs{transition:opacity .45s var(--ease),visibility 0s .45s} /* crossfades into the flat logo, then stops drawing */
+/* the pieces that land stay on screen as the still logo (no swap to a second drawing, so nothing jumps); the white
+   letters and the light sweep are drawn on top of them */
 #boot.lit .glow,#boot.lit .whole{opacity:1}
 /* once still, the logo grows slightly for exactly as long as the light takes to cross it */
-#boot .logo,#boot .glow{transition:scale var(--sweep,1.5s) cubic-bezier(.3,.2,.5,1),opacity .6s}
+#boot .logo,#boot .glow{transition:scale var(--sweep,1.5s) cubic-bezier(.45,0,.55,1),opacity .6s}
 #boot.lit .logo,#boot.lit .glow{scale:1.08}
-#boot.lit .pcs{opacity:0;visibility:hidden}
+
 #boot .wh{opacity:0;transition:opacity .22s}
 #boot .wh.on{opacity:1}
 #home.boot{opacity:0}
@@ -1529,8 +1530,7 @@ function runIntro(){
     }
   });
   // finished logo: gradient letters, a white copy of each piece (lit as the light passes it), then the moving light on top
-  boot.querySelector('.whole').innerHTML = `<path d="${all}" fill="url(#bootFill)" fill-rule="evenodd"/>`
-    + LOGO.map((p, i) => `<use class="wh" href="#lp${i}" fill="#fff"/>`).join('')
+  boot.querySelector('.whole').innerHTML = LOGO.map((p, i) => `<use class="wh" href="#lp${i}" fill="#fff"/>`).join('')
     + `<path d="${all}" fill="url(#bootShine)" fill-rule="evenodd"/>`;
   homeEl.classList.add('boot');
   let done = false; const timers = [];
@@ -1545,7 +1545,7 @@ function runIntro(){
   const skip = e => { e.preventDefault(); e.stopImmediatePropagation(); finish(); }; // a pinch skips; it must not also open an app
   addEventListener('keydown', skip, true); boot.addEventListener('click', skip);
   const whites = [...boot.querySelectorAll('.wh')];
-  if(P.reduce){ boot.classList.add('lit'); timers.push(setTimeout(() => whites.forEach(w => w.classList.add('on')), 300), setTimeout(finish, 1500)); return; }
+  if(P.reduce){ pcs.querySelectorAll('.dp').forEach(d => d.style.opacity = 0); boot.classList.add('lit'); timers.push(setTimeout(() => whites.forEach(w => w.classList.add('on')), 300), setTimeout(finish, 1500)); return; }
   const INTRO_MS = 2950; // drift in 1.1 s, float 0.75 s, snap together 1.1 s
   const rand = a => (Math.random() * 2 - 1) * a;
   const T = (x, y, z, a, b, c, k = 1) => `translate3d(${x}px,${y}px,${z}px) rotateX(${a}deg) rotateY(${b}deg) rotateZ(${c}deg) scale3d(${k},${k},${k})`;
@@ -1941,7 +1941,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-13';
+const APP_BUILD = '2026-11-03-14';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
