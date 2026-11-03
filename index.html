@@ -58,6 +58,8 @@ svg{display:block}
    that breathes slowly when Animated Background is on; one opacity animation, cheap to draw */
 #wallglow{position:absolute;inset:0;border-radius:38px;pointer-events:none;opacity:calc(var(--wall) / .7 * (1 - var(--see,0)));transition:opacity .4s var(--ease)}
 #wallglow::before{content:"";position:absolute;inset:0;background:url(wallpaper-circuit-glow.png) center/cover no-repeat}
+/* computers get the 4K (3840 x 3840) board, drawn once and still; the 600 x 600 lens gets a 1200 x 1200 copy. The pulsing
+   lights stay at 1200 everywhere: they're soft glows, and a constantly animated 4K layer would cost smoothness */
 #wallglow.pulse::before{animation:glowPulse 3.2s ease-in-out infinite}
 @keyframes glowPulse{0%,100%{opacity:.45}50%{opacity:1}}
 #wall.under~#wallglow{opacity:calc(var(--wall) / .7 * .45 * (1 - var(--see,0)))}
@@ -1960,7 +1962,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-22';
+const APP_BUILD = '2026-11-03-23';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -2039,6 +2041,7 @@ apply();
 history.replaceState({}, '');
 $('#wallbrand').innerHTML = `<path fill-rule="evenodd" d="${LOGO.map(p => p[4]).join('')}"/>`; // the mark and "SiteVue AI"
 if(isLens()) document.body.classList.add('lens');
+else $('#wall').setAttribute('poster', 'wallpaper-circuit-4k.jpg');
 loadTheme();
 render(true);
 runIntro();
