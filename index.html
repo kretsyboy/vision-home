@@ -362,6 +362,12 @@ textarea::placeholder,input::placeholder{color:var(--ink-3)}
 .lens .tap,.lens .icon.tap .disc,.lens .window.swap>*{animation:none!important}
 .lens .winbar .grab.moving i{box-shadow:none}
 .lens .spin:focus .ar,.lens .slider:focus .track i{transition:none}
+/* the boot intro keeps its fades and its slow grow on the lens (nothing else is moving then), or the switch from the
+   flying pieces to the still logo jumps */
+.lens #boot{transition:opacity .5s var(--ease),scale .6s var(--ease)!important}
+.lens #boot .whole{transition:opacity .45s var(--ease)!important}
+.lens #boot .logo,.lens #boot .glow{transition:scale var(--sweep,1.5s) cubic-bezier(.45,0,.55,1),opacity .6s!important}
+.lens #boot .wh{transition:opacity .22s!important}
 
 /* ---------- toast ---------- */
 #toast{position:absolute;top:14px;left:50%;translate:-50% -80px;padding:12px 22px;border-radius:26px;font-size:1.05rem;
@@ -1963,7 +1969,7 @@ async function refreshTheme(){
    So the app asks the site for the latest version now and then (at start, every 5 minutes, and whenever it comes back
    to the front); if a newer one exists it refreshes the saved copy and reloads, but only on the Home screen, never in
    the middle of using an app. APP_BUILD changes with every publish. */
-const APP_BUILD = '2026-11-03-25';
+const APP_BUILD = '2026-11-03-29';
 let UPDATE_READY = false;
 async function checkForUpdate(){
   if(WATCH !== null || PHOTOSEND !== null || UPDATE_READY || location.protocol === 'file:') return;
@@ -2046,13 +2052,7 @@ else $('#wall').setAttribute('poster', 'wallpaper-circuit-4k.jpg');
 loadTheme();
 render(true);
 runIntro();
-// once, when the purple circuit wallpaper arrives: switch back from any saved wallpaper photo so it shows
-// (you can still pick a photo again in Settings → Wallpaper photo)
-if(WATCH === null && PHOTOSEND === null && P.wallV3 !== 1){
-  P.wallV3 = 1; save();
-  try { localStorage.removeItem(PHOTO_KEY); localStorage.removeItem(THEME_KEY); } catch(e){}
-  THEME = null;
-}
+// a wallpaper photo you pick stays until you change it; updates never clear it
 showWallPhoto();
 if(PHOTOSEND !== null) setupPhotoSend();
 else if(WATCH !== null) setupWatch();
